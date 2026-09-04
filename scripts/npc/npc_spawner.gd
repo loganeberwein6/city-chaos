@@ -148,23 +148,70 @@ func _rpc_despawn_npc(npc_id: int) -> void:
 		_client_npcs[npc_id].queue_free()
 	_client_npcs.erase(npc_id)
 
-func _make_ghost(npc_type: String) -> Node3D:
-	var root := Node3D.new()
-	var mat := StandardMaterial3D.new()
+func _npc_colors(npc_type: String) -> Array:
 	match npc_type:
-		"gangster":  mat.albedo_color = Color(0.2, 0.2, 0.2)
-		"rich":      mat.albedo_color = Color(0.8, 0.75, 0.3)
-		"paramedic": mat.albedo_color = Color(0.9, 0.9, 0.9)
-		"news":      mat.albedo_color = Color(0.3, 0.5, 0.9)
-		_:           mat.albedo_color = Color(0.6, 0.55, 0.5)
-	var body_mi := MeshInstance3D.new()
-	var body_mesh := CapsuleMesh.new(); body_mesh.radius = 0.3; body_mesh.height = 1.4
-	body_mi.mesh = body_mesh; body_mi.material_override = mat; body_mi.position = Vector3(0, 0.7, 0)
-	root.add_child(body_mi)
-	var head_mi := MeshInstance3D.new()
-	var head_mesh := SphereMesh.new(); head_mesh.radius = 0.22; head_mesh.height = 0.44
-	head_mi.mesh = head_mesh; head_mi.material_override = mat; head_mi.position = Vector3(0, 1.62, 0)
-	root.add_child(head_mi)
+		"gangster":  return [Color(0.30,0.22,0.18), Color(0.12,0.12,0.14), Color(0.10,0.10,0.12), Color(0.08,0.08,0.08)]
+		"rich":      return [Color(0.88,0.75,0.62), Color(0.95,0.95,0.92), Color(0.20,0.20,0.25), Color(0.15,0.12,0.10)]
+		"paramedic": return [Color(0.75,0.62,0.50), Color(0.92,0.92,0.92), Color(0.92,0.92,0.92), Color(0.25,0.25,0.25)]
+		"news":      return [Color(0.82,0.68,0.55), Color(0.30,0.50,0.90), Color(0.20,0.22,0.28), Color(0.15,0.12,0.10)]
+		_:           return [Color(0.80,0.68,0.55), Color(0.55,0.55,0.60), Color(0.30,0.32,0.38), Color(0.20,0.18,0.15)]
+
+func _npc_mat(color: Color) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color; m.roughness = 0.8; return m
+
+func _npc_mi(parent: Node3D, mesh: Mesh, mat: StandardMaterial3D, pos: Vector3) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh; mi.material_override = mat; mi.position = pos
+	parent.add_child(mi)
+
+func _make_ghost(npc_type: String) -> Node3D:
+	var root   := Node3D.new()
+	var cols   := _npc_colors(npc_type)
+	var skin_m := _npc_mat(cols[0])
+	var shrt_m := _npc_mat(cols[1])
+	var pant_m := _npc_mat(cols[2])
+	var shoe_m := _npc_mat(cols[3])
+
+	# Head + neck
+	var head_mesh := SphereMesh.new(); head_mesh.radius = 0.115; head_mesh.height = 0.23
+	_npc_mi(root, head_mesh, skin_m, Vector3(0, 1.72, 0))
+	var neck_mesh := CylinderMesh.new(); neck_mesh.top_radius = 0.048; neck_mesh.bottom_radius = 0.048; neck_mesh.height = 0.09
+	_npc_mi(root, neck_mesh, skin_m, Vector3(0, 1.615, 0))
+
+	# Torso + pelvis
+	var torso_mesh := BoxMesh.new(); torso_mesh.size = Vector3(0.34, 0.46, 0.19)
+	_npc_mi(root, torso_mesh, shrt_m, Vector3(0, 1.28, 0))
+	var pelvis_mesh := BoxMesh.new(); pelvis_mesh.size = Vector3(0.30, 0.18, 0.17)
+	_npc_mi(root, pelvis_mesh, pant_m, Vector3(0, 0.88, 0))
+
+	# Shoulder pads
+	var sp_mesh := BoxMesh.new(); sp_mesh.size = Vector3(0.10, 0.08, 0.10)
+	_npc_mi(root, sp_mesh, shrt_m, Vector3(-0.22, 1.50, 0))
+	_npc_mi(root, sp_mesh, shrt_m, Vector3( 0.22, 1.50, 0))
+
+	# Arms
+	var ua_mesh := CapsuleMesh.new(); ua_mesh.radius = 0.055; ua_mesh.height = 0.26
+	_npc_mi(root, ua_mesh, shrt_m, Vector3(-0.25, 1.22, 0))
+	_npc_mi(root, ua_mesh, shrt_m, Vector3( 0.25, 1.22, 0))
+	var la_mesh := CapsuleMesh.new(); la_mesh.radius = 0.045; la_mesh.height = 0.24
+	_npc_mi(root, la_mesh, shrt_m, Vector3(-0.26, 0.94, 0))
+	_npc_mi(root, la_mesh, shrt_m, Vector3( 0.26, 0.94, 0))
+	var hand_mesh := BoxMesh.new(); hand_mesh.size = Vector3(0.07, 0.055, 0.038)
+	_npc_mi(root, hand_mesh, skin_m, Vector3(-0.26, 0.78, 0))
+	_npc_mi(root, hand_mesh, skin_m, Vector3( 0.26, 0.78, 0))
+
+	# Legs
+	var ul_mesh := CapsuleMesh.new(); ul_mesh.radius = 0.072; ul_mesh.height = 0.36
+	_npc_mi(root, ul_mesh, pant_m, Vector3(-0.10, 0.60, 0))
+	_npc_mi(root, ul_mesh, pant_m, Vector3( 0.10, 0.60, 0))
+	var ll_mesh := CapsuleMesh.new(); ll_mesh.radius = 0.058; ll_mesh.height = 0.33
+	_npc_mi(root, ll_mesh, pant_m, Vector3(-0.10, 0.26, 0))
+	_npc_mi(root, ll_mesh, pant_m, Vector3( 0.10, 0.26, 0))
+	var foot_mesh := BoxMesh.new(); foot_mesh.size = Vector3(0.09, 0.055, 0.20)
+	_npc_mi(root, foot_mesh, shoe_m, Vector3(-0.10, 0.03, 0.04))
+	_npc_mi(root, foot_mesh, shoe_m, Vector3( 0.10, 0.03, 0.04))
+
 	return root
 
 func _pick_type() -> String:

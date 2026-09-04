@@ -47,6 +47,13 @@ func _tick_attack(delta: float) -> void:
 				target.take_damage(8.0, -1)
 			WantedSystem.report_crime("punch_civilian")
 
+func _build_visual(root: Node3D) -> void:
+	_npc_build_humanoid(root,
+		_npc_mat(Color(0.80, 0.68, 0.55)),
+		_npc_mat(Color(0.55, 0.55, 0.60)),
+		_npc_mat(Color(0.30, 0.32, 0.38)),
+		_npc_mat(Color(0.20, 0.18, 0.15)))
+
 func _on_hurt(attacker_id: int) -> void:
 	if state != State.ATTACK:
 		if fights_back:

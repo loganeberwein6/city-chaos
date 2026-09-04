@@ -57,6 +57,13 @@ func _try_pay_player() -> void:
 	SaveData.add_cash(bribe)
 	_pay_cooldown = 8.0
 
+func _build_visual(root: Node3D) -> void:
+	_npc_build_humanoid(root,
+		_npc_mat(Color(0.88, 0.75, 0.62)),
+		_npc_mat(Color(0.95, 0.95, 0.92)),
+		_npc_mat(Color(0.20, 0.20, 0.25)),
+		_npc_mat(Color(0.15, 0.12, 0.10)))
+
 func _on_hurt(attacker_id: int) -> void:
 	var attacker := GameManager.get_player_node(attacker_id)
 	if attacker:

@@ -73,6 +73,13 @@ func _tick_chase(delta: float) -> void:
 	else:
 		_move_toward(_film_target.global_position, run_speed, delta)
 
+func _build_visual(root: Node3D) -> void:
+	_npc_build_humanoid(root,
+		_npc_mat(Color(0.82, 0.68, 0.55)),
+		_npc_mat(Color(0.30, 0.50, 0.90)),
+		_npc_mat(Color(0.20, 0.22, 0.28)),
+		_npc_mat(Color(0.15, 0.12, 0.10)))
+
 func _on_hurt(attacker_id: int) -> void:
 	if _filming: _stop_filming()
 	var p := GameManager.get_player_node(attacker_id)

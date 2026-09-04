@@ -58,6 +58,13 @@ func _shoot_at(tgt: Node3D) -> void:
 	if result and result["collider"] == tgt:
 		tgt.take_damage(dmg, -1)
 
+func _build_visual(root: Node3D) -> void:
+	_npc_build_humanoid(root,
+		_npc_mat(Color(0.30, 0.22, 0.18)),
+		_npc_mat(Color(0.12, 0.12, 0.14)),
+		_npc_mat(Color(0.10, 0.10, 0.12)),
+		_npc_mat(Color(0.08, 0.08, 0.08)))
+
 func _on_hurt(attacker_id: int) -> void:
 	var attacker := GameManager.get_player_node(attacker_id)
 	if attacker: enter_attack(attacker)

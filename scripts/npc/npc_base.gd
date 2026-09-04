@@ -30,6 +30,66 @@ const GRAVITY := 20.0
 func _ready() -> void:
 	_rng.randomize()
 	_enter_idle()
+	var mesh_root_node: Node3D = get_node_or_null("MeshRoot")
+	if mesh_root_node:
+		_build_visual(mesh_root_node)
+
+func _build_visual(root: Node3D) -> void:
+	# Default: civilian-style humanoid. Subclasses override this.
+	var skin_m  := _npc_mat(Color(0.80, 0.68, 0.55))
+	var shrt_m  := _npc_mat(Color(0.55, 0.55, 0.60))
+	var pant_m  := _npc_mat(Color(0.30, 0.32, 0.38))
+	var shoe_m  := _npc_mat(Color(0.20, 0.18, 0.15))
+	_npc_build_humanoid(root, skin_m, shrt_m, pant_m, shoe_m)
+
+func _npc_mat(color: Color) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color; m.roughness = 0.8; return m
+
+func _npc_mi(parent: Node3D, mesh: Mesh, mat: StandardMaterial3D, pos: Vector3) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh; mi.material_override = mat; mi.position = pos
+	parent.add_child(mi)
+
+func _npc_build_humanoid(root: Node3D,
+		skin_m: StandardMaterial3D, shrt_m: StandardMaterial3D,
+		pant_m: StandardMaterial3D, shoe_m: StandardMaterial3D) -> void:
+	# Head + neck
+	var head_mesh := SphereMesh.new(); head_mesh.radius = 0.115; head_mesh.height = 0.23
+	_npc_mi(root, head_mesh, skin_m, Vector3(0, 1.72, 0))
+	var neck_mesh := CylinderMesh.new(); neck_mesh.top_radius = 0.048; neck_mesh.bottom_radius = 0.048; neck_mesh.height = 0.09
+	_npc_mi(root, neck_mesh, skin_m, Vector3(0, 1.615, 0))
+	# Torso + pelvis
+	var torso_mesh := BoxMesh.new(); torso_mesh.size = Vector3(0.34, 0.46, 0.19)
+	_npc_mi(root, torso_mesh, shrt_m, Vector3(0, 1.28, 0))
+	var pelvis_mesh := BoxMesh.new(); pelvis_mesh.size = Vector3(0.30, 0.18, 0.17)
+	_npc_mi(root, pelvis_mesh, pant_m, Vector3(0, 0.88, 0))
+	# Shoulder pads
+	var sp_mesh := BoxMesh.new(); sp_mesh.size = Vector3(0.10, 0.08, 0.10)
+	_npc_mi(root, sp_mesh, shrt_m, Vector3(-0.22, 1.50, 0))
+	_npc_mi(root, sp_mesh, shrt_m, Vector3( 0.22, 1.50, 0))
+	# Arms
+	var ua_mesh := CapsuleMesh.new(); ua_mesh.radius = 0.055; ua_mesh.height = 0.26
+	_npc_mi(root, ua_mesh, shrt_m, Vector3(-0.25, 1.22, 0))
+	_npc_mi(root, ua_mesh, shrt_m, Vector3( 0.25, 1.22, 0))
+	var la_mesh := CapsuleMesh.new(); la_mesh.radius = 0.045; la_mesh.height = 0.24
+	_npc_mi(root, la_mesh, shrt_m, Vector3(-0.26, 0.94, 0))
+	_npc_mi(root, la_mesh, shrt_m, Vector3( 0.26, 0.94, 0))
+	var hand_mesh := BoxMesh.new(); hand_mesh.size = Vector3(0.07, 0.055, 0.038)
+	_npc_mi(root, hand_mesh, skin_m, Vector3(-0.26, 0.78, 0))
+	_npc_mi(root, hand_mesh, skin_m, Vector3( 0.26, 0.78, 0))
+	# Upper legs
+	var ul_mesh := CapsuleMesh.new(); ul_mesh.radius = 0.072; ul_mesh.height = 0.36
+	_npc_mi(root, ul_mesh, pant_m, Vector3(-0.10, 0.60, 0))
+	_npc_mi(root, ul_mesh, pant_m, Vector3( 0.10, 0.60, 0))
+	# Lower legs
+	var ll_mesh := CapsuleMesh.new(); ll_mesh.radius = 0.058; ll_mesh.height = 0.33
+	_npc_mi(root, ll_mesh, pant_m, Vector3(-0.10, 0.26, 0))
+	_npc_mi(root, ll_mesh, pant_m, Vector3( 0.10, 0.26, 0))
+	# Feet
+	var foot_mesh := BoxMesh.new(); foot_mesh.size = Vector3(0.09, 0.055, 0.20)
+	_npc_mi(root, foot_mesh, shoe_m, Vector3(-0.10, 0.03, 0.04))
+	_npc_mi(root, foot_mesh, shoe_m, Vector3( 0.10, 0.03, 0.04))
 
 func _physics_process(delta: float) -> void:
 	if state == State.DEAD:

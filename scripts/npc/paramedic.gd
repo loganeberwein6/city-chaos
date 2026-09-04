@@ -81,6 +81,13 @@ func _tick_chase(delta: float) -> void:
 	else:
 		_move_toward(_heal_target.global_position, run_speed, delta)
 
+func _build_visual(root: Node3D) -> void:
+	_npc_build_humanoid(root,
+		_npc_mat(Color(0.75, 0.62, 0.50)),
+		_npc_mat(Color(0.92, 0.92, 0.92)),
+		_npc_mat(Color(0.92, 0.92, 0.92)),
+		_npc_mat(Color(0.25, 0.25, 0.25)))
+
 func _on_hurt(_attacker_id: int) -> void:
 	var p := is_player_nearby()
 	if p: enter_flee(p)
