@@ -1,13 +1,25 @@
-using System.Diagnostics;
-using System.IO;
-using System.Reflection;
-
+// Run Game.exe — silent updater that can replace Update Game.exe (since it's not running).
+// Update Game.exe runs separately with a GUI and can replace Run Game.exe.
 class RunGame
 {
     static void Main()
     {
-        string dir     = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        string updater = Path.Combine(dir, "Update Game.exe");
-        Process.Start(new ProcessStartInfo(updater, "--silent") { WorkingDirectory = dir, UseShellExecute = true });
+        try
+        {
+            int local  = Game.ReadLocalVersion();
+            int remote = Game.FetchRemoteVersion();
+            if (remote > local)
+            {
+                Game.DownloadAndApply();
+                Game.WriteLocalVersion(remote);
+                Game.RecordResult(downloaded: true, fromVer: local, toVer: remote);
+            }
+            else
+            {
+                Game.RecordResult(downloaded: false, fromVer: local, toVer: local);
+            }
+        }
+        catch { }
+        Game.Launch();
     }
 }
