@@ -1,6 +1,8 @@
 extends Control
 
 var _discovered: Array[Dictionary] = []
+var _pending_hero := "normal_person"
+var _pending_host_data := {}
 
 const _SAVE_PATH := "user://player_config.cfg"
 
@@ -68,14 +70,19 @@ func _on_quit_pressed() -> void:
 func _on_connect_pressed() -> void:
 	var list := $JoinScreen/VBox/ServerList as ItemList
 	var sel  := list.get_selected_items()
+	var ip   := ""
+	var port := 7777
 	if sel.size() > 0:
 		var info: Dictionary = _discovered[sel[0]]
-		NetworkManager.join(info["ip"], info.get("port", 7777))
-		return
-	var ip   := ($JoinScreen/VBox/HBox/IPInput as LineEdit).text.strip_edges()
-	var port := ($JoinScreen/VBox/HBox/PortInput as LineEdit).text.to_int()
-	if ip != "":
-		NetworkManager.join(ip, port if port > 0 else 7777)
+		ip   = info["ip"]
+		port = info.get("port", 7777)
+	else:
+		ip   = ($JoinScreen/VBox/HBox/IPInput as LineEdit).text.strip_edges()
+		port = ($JoinScreen/VBox/HBox/PortInput as LineEdit).text.to_int()
+		if port <= 0: port = 7777
+	if ip == "": return
+	_pending_host_data = {"ip": ip, "port": port}
+	_show_character_select(false)
 
 func _on_join_cancel_pressed() -> void:
 	NetworkManager.stop_discovery()
@@ -93,18 +100,31 @@ func _on_start_pressed() -> void:
 	GameManager.rules["map_size"]    = map_size
 	GameManager.rules["world_seed"]  = world_seed
 	GameManager.rules["cheats_mode"] = cheats_mode
-	if NetworkManager.host(pname):
-		_save_name(pname)
-		NetworkManager.register_self(pname, "normal_person")
-		get_tree().change_scene_to_file("res://scenes/game.tscn")
-	else:
-		printerr("Failed to host")
+	_pending_host_data = {"name": pname}
+	_show_character_select(true)
 
 func _on_lobby_cancel_pressed() -> void:
 	_show("Main")
 
 func _on_options_back_pressed() -> void:
 	_show("Main")
+
+func _show_character_select(is_hosting: bool) -> void:
+	var cs := load("res://scenes/character_select.tscn").instantiate() as Control
+	add_child(cs)
+	cs.hero_chosen.connect(func(hero: String):
+		_pending_hero = hero
+		if is_hosting:
+			var pname: String = _pending_host_data.get("name", "Player")
+			if NetworkManager.host(pname):
+				_save_name(pname)
+				NetworkManager.register_self(pname, hero)
+				get_tree().change_scene_to_file("res://scenes/game.tscn")
+			else:
+				printerr("Failed to host")
+		else:
+			NetworkManager.join(_pending_host_data["ip"], _pending_host_data.get("port", 7777))
+	)
 
 # ── Network callbacks ───────────────────────────────────────────────────────
 
@@ -117,7 +137,7 @@ func _on_connected() -> void:
 	var pname := ($LobbyScreen/VBox/NameInput as LineEdit).text.strip_edges()
 	if pname == "": pname = "Player"
 	_save_name(pname)
-	NetworkManager.register_self(pname, "normal_person")
+	NetworkManager.register_self(pname, _pending_hero)
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
 
 func _on_connection_failed() -> void:

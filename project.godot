@@ -18,6 +18,7 @@ SaveData="*res://scripts/autoloads/save_data.gd"
 WantedSystem="*res://scripts/autoloads/wanted_system.gd"
 NetworkManager="*res://scripts/autoloads/network_manager.gd"
 GameManager="*res://scripts/autoloads/game_manager.gd"
+LagCompensator="*res://scripts/autoloads/lag_compensator.gd"
 
 [display]
 

@@ -60,6 +60,7 @@ func _ready() -> void:
 	spring_arm.rotation.x = _cam_pitch
 	spring_arm.add_excluded_object(get_rid())
 	spring_arm.collision_mask = 0
+	CharacterModel.build(mesh_root, hero_id)
 	if _is_local:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		camera.current = true
@@ -290,15 +291,43 @@ func _try_attack() -> void:
 func _punch() -> void:
 	WantedSystem.report_crime("punch_civilian")
 
-func _fire_weapon(_weapon_id: String) -> void:
-	# Raycast from camera
+func _fire_weapon(weapon_id: String) -> void:
 	var from := camera.global_position
-	var to   := from + (-camera.global_basis.z * 200.0)
+	var dir  := -camera.global_basis.z
+	var client_time := Time.get_ticks_msec()
+	if multiplayer.is_server():
+		_server_process_shot(from, dir, client_time, weapon_id)
+	else:
+		_rpc_fire_shot.rpc_id(1, from, dir, client_time, weapon_id)
+
+@rpc("any_peer", "reliable", "call_remote")
+func _rpc_fire_shot(from: Vector3, dir: Vector3, client_time: int, weapon_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	_server_process_shot(from, dir, client_time, weapon_id)
+
+func _server_process_shot(from: Vector3, dir: Vector3, client_time: int, weapon_id: String) -> void:
+	var snapshot: Dictionary = LagCompensator.get_snapshot_at(client_time)
+	var saved_positions: Dictionary = {}
+	for pid in snapshot:
+		if pid == peer_id:
+			continue
+		var p: Node3D = GameManager.get_player_node(pid)
+		if p and is_instance_valid(p):
+			saved_positions[pid] = p.global_position
+			p.global_position = snapshot[pid]
+
+	var to := from + dir * 200.0
 	var query := PhysicsRayQueryParameters3D.create(from, to, 0xFFFFFFFF, [self])
 	var result := get_world_3d().direct_space_state.intersect_ray(query)
+	var dmg := _weapon_damage(weapon_id)
 	if result and result["collider"].has_method("take_damage"):
-		var dmg := _weapon_damage(_weapon_id)
 		result["collider"].take_damage(dmg, peer_id)
+
+	for pid in saved_positions:
+		var p: Node3D = GameManager.get_player_node(pid)
+		if p and is_instance_valid(p):
+			p.global_position = saved_positions[pid]
 
 func _weapon_damage(wid: String) -> float:
 	var dmg_table := {"pistol": 25.0, "revolver": 60.0, "dual_pistols": 20.0,
