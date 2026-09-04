@@ -25,6 +25,8 @@ var _rng := RandomNumberGenerator.new()
 
 const GRAVITY := 20.0
 
+@onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
+
 func _ready() -> void:
 	_rng.randomize()
 	_enter_idle()
@@ -60,7 +62,9 @@ func _tick_wander(delta: float) -> void:
 	if dist < 1.0 or _state_timer <= 0.0:
 		_enter_idle()
 		return
-	_move_toward(_wander_target, walk_speed, delta)
+	nav_agent.set_target_position(_wander_target)
+	var next := nav_agent.get_next_path_position()
+	_move_toward(next, walk_speed, delta)
 
 func _tick_flee(delta: float) -> void:
 	if target == null or not is_instance_valid(target):
@@ -69,8 +73,13 @@ func _tick_flee(delta: float) -> void:
 	var away := global_position + (global_position - target.global_position).normalized() * 10.0
 	_move_toward(away, run_speed, delta)
 
-func _tick_chase(_delta: float) -> void:
-	pass  # Override in subclasses
+func _tick_chase(delta: float) -> void:
+	if target == null or not is_instance_valid(target):
+		_enter_idle()
+		return
+	nav_agent.set_target_position(target.global_position)
+	var next := nav_agent.get_next_path_position()
+	_move_toward(next, run_speed, delta)
 
 func _tick_attack(_delta: float) -> void:
 	pass  # Override in subclasses

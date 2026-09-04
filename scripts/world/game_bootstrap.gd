@@ -13,6 +13,7 @@ func _ready() -> void:
 	_map_size = GameManager.rules.get("map_size", "medium")
 
 	world_gen.call("generate", _seed_val, _map_size)
+	_bake_navmesh()
 	_spawn_local_player()
 
 	if multiplayer.is_server():
@@ -24,7 +25,13 @@ func _ready() -> void:
 @rpc("authority", "reliable", "call_remote")
 func _rpc_sync_world(seed_val: int, map_size: String) -> void:
 	world_gen.call("generate", seed_val, map_size)
+	_bake_navmesh()
 	_spawn_local_player()
+
+func _bake_navmesh() -> void:
+	var nav: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
+	if nav:
+		nav.bake_navigation_mesh()
 
 func _spawn_local_player() -> void:
 	var my_id: int = multiplayer.get_unique_id()

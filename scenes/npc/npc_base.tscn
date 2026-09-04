@@ -21,3 +21,7 @@ shape = SubResource("1")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 mesh = SubResource("2")
 surface_material_override/0 = SubResource("3")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 1.0

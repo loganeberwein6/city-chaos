@@ -1,6 +1,7 @@
 extends CharacterBody3D
 
 const CharacterModel = preload("res://scripts/player/character_model.gd")
+const WeaponModel = preload("res://scripts/player/weapon_model.gd")
 
 # ── Stats (overridden per hero) ────────────────────────────────────────────────
 @export var walk_speed     := 5.0
@@ -29,9 +30,10 @@ var weapon_slots: Array[Dictionary] = []  # [{id, ammo, reserve}, ...]
 @export var camera_max_pitch   := 90.0
 @export var camera_distance    := 6.0
 
-@onready var spring_arm: SpringArm3D  = $SpringArm3D
-@onready var camera:     Camera3D    = $SpringArm3D/Camera3D
-@onready var mesh_root:  Node3D      = $MeshRoot
+@onready var spring_arm:       SpringArm3D  = $SpringArm3D
+@onready var camera:           Camera3D    = $SpringArm3D/Camera3D
+@onready var mesh_root:        Node3D      = $MeshRoot
+@onready var weapon_mesh_root: Node3D      = $WeaponMeshRoot
 
 var _cam_pitch := deg_to_rad(-20.0)
 var _is_local  := false
@@ -70,6 +72,7 @@ func _ready() -> void:
 	_init_weapon_slots()
 	_load_hero_component()
 	add_to_group("players")
+	_equip_slot(active_weapon_slot)
 
 func _exit_tree() -> void:
 	GameManager.unregister_player(peer_id)

@@ -22,6 +22,7 @@ func _ready() -> void:
 	_build_star_display()
 	_build_hotbar()
 	death_overlay.hide()
+	star_row.visible = false
 	WantedSystem.stars_changed.connect(_on_stars_changed)
 	GameManager.player_died.connect(_on_player_died)
 	GameManager.player_respawned.connect(_on_player_respawned)
@@ -63,6 +64,7 @@ func _build_star_display() -> void:
 	_on_stars_changed(0)
 
 func _on_stars_changed(stars: int) -> void:
+	star_row.visible = (stars > 0)
 	for i in _star_icons.size():
 		var icon := _star_icons[i]
 		if i < stars:

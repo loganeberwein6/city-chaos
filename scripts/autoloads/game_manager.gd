@@ -95,9 +95,12 @@ func on_player_died(victim_id: int, killer_id: int, dropped_weapon: String, deat
 	SaveData.deduct_rep_on_death()
 	SaveData.deplete_ammo_on_death()
 
-	# PvP bonus for killer
+	# PvP bonus for killer — base bounty scales with victim's wanted stars
 	if killer_id != victim_id and killer_id != 0:
-		var bonus := loss / 2
+		var stars: int = WantedSystem.get_stars()
+		const STAR_BOUNTY: Array[int] = [100, 250, 500, 1000, 2000, 5000]
+		var bounty: int = STAR_BOUNTY[clampi(stars, 0, STAR_BOUNTY.size() - 1)]
+		var bonus := loss / 2 + bounty
 		_give_cash_to_peer(killer_id, bonus)
 
 	# Broadcast death event
