@@ -11,7 +11,15 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="MainScreen" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="MainScreen"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -21,7 +29,7 @@ grow_vertical = 2
 color = Color(0.08, 0.10, 0.14, 1)
 mouse_filter = 2
 
-[node name="TitleLabel" type="Label" parent="."]
+[node name="TitleLabel" type="Label" parent="MainScreen"]
 layout_mode = 1
 anchor_left = 0.5
 anchor_right = 0.5
@@ -36,42 +44,60 @@ vertical_alignment = 1
 theme_override_font_sizes/font_size = 52
 mouse_filter = 2
 
-[node name="MainPanel" type="VBoxContainer" parent="."]
+[node name="MainPanel" type="VBoxContainer" parent="MainScreen"]
 layout_mode = 1
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -120.0
-offset_top = -110.0
+offset_top = -100.0
 offset_right = 120.0
-offset_bottom = 110.0
+offset_bottom = 100.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 14
 
-[node name="BtnHost" type="Button" parent="MainPanel"]
+[node name="BtnHost" type="Button" parent="MainScreen/MainPanel"]
 layout_mode = 2
 custom_minimum_size = Vector2(240, 48)
 text = "Host Game"
 
-[node name="BtnJoin" type="Button" parent="MainPanel"]
+[node name="BtnJoin" type="Button" parent="MainScreen/MainPanel"]
 layout_mode = 2
 custom_minimum_size = Vector2(240, 48)
 text = "Join Game"
 
-[node name="BtnOptions" type="Button" parent="MainPanel"]
+[node name="BtnOptions" type="Button" parent="MainScreen/MainPanel"]
 layout_mode = 2
 custom_minimum_size = Vector2(240, 48)
 text = "Options"
 
-[node name="BtnQuit" type="Button" parent="MainPanel"]
+[node name="BtnQuit" type="Button" parent="MainScreen/MainPanel"]
 layout_mode = 2
 custom_minimum_size = Vector2(240, 48)
 text = "Quit"
 
-[node name="JoinPanel" type="PanelContainer" parent="."]
+[node name="JoinScreen" type="Control" parent="."]
 visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="JoinScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.10, 0.14, 1)
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="JoinScreen"]
 layout_mode = 1
 anchor_left = 0.5
 anchor_top = 0.5
@@ -83,43 +109,58 @@ offset_right = 280.0
 offset_bottom = 220.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="VBox" type="VBoxContainer" parent="JoinPanel"]
-layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="JoinPanel/VBox"]
+[node name="Label" type="Label" parent="JoinScreen/VBox"]
 layout_mode = 2
 text = "Join Game"
 theme_override_font_sizes/font_size = 22
 
-[node name="ServerList" type="ItemList" parent="JoinPanel/VBox"]
+[node name="ServerList" type="ItemList" parent="JoinScreen/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 160)
 
-[node name="HBox" type="HBoxContainer" parent="JoinPanel/VBox"]
+[node name="HBox" type="HBoxContainer" parent="JoinScreen/VBox"]
 layout_mode = 2
 
-[node name="IPInput" type="LineEdit" parent="JoinPanel/VBox/HBox"]
+[node name="IPInput" type="LineEdit" parent="JoinScreen/VBox/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "IP Address"
 
-[node name="PortInput" type="LineEdit" parent="JoinPanel/VBox/HBox"]
+[node name="PortInput" type="LineEdit" parent="JoinScreen/VBox/HBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(80, 0)
 text = "7777"
 
-[node name="BtnConnect" type="Button" parent="JoinPanel/VBox"]
+[node name="BtnConnect" type="Button" parent="JoinScreen/VBox"]
 layout_mode = 2
 text = "Connect"
 
-[node name="BtnCancel" type="Button" parent="JoinPanel/VBox"]
+[node name="BtnCancel" type="Button" parent="JoinScreen/VBox"]
 layout_mode = 2
 text = "Back"
 
-[node name="LobbyPanel" type="PanelContainer" parent="."]
+[node name="LobbyScreen" type="Control" parent="."]
 visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="LobbyScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.10, 0.14, 1)
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="LobbyScreen"]
 layout_mode = 1
 anchor_left = 0.5
 anchor_top = 0.5
@@ -131,56 +172,71 @@ offset_right = 240.0
 offset_bottom = 260.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="VBox" type="VBoxContainer" parent="LobbyPanel"]
-layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Label" type="Label" parent="LobbyPanel/VBox"]
+[node name="Label" type="Label" parent="LobbyScreen/VBox"]
 layout_mode = 2
 text = "Host Game"
 theme_override_font_sizes/font_size = 22
 
-[node name="NameInput" type="LineEdit" parent="LobbyPanel/VBox"]
+[node name="NameInput" type="LineEdit" parent="LobbyScreen/VBox"]
 layout_mode = 2
 placeholder_text = "Your name"
 
-[node name="MapSizeLabel" type="Label" parent="LobbyPanel/VBox"]
+[node name="MapSizeLabel" type="Label" parent="LobbyScreen/VBox"]
 layout_mode = 2
 text = "Map Size"
 
-[node name="MapSize" type="OptionButton" parent="LobbyPanel/VBox"]
+[node name="MapSize" type="OptionButton" parent="LobbyScreen/VBox"]
 layout_mode = 2
 
-[node name="CheatsCheck" type="CheckBox" parent="LobbyPanel/VBox"]
+[node name="CheatsCheck" type="CheckBox" parent="LobbyScreen/VBox"]
 layout_mode = 2
 text = "Enable Cheats"
 
-[node name="CheatsModeLabel" type="Label" parent="LobbyPanel/VBox"]
+[node name="CheatsModeLabel" type="Label" parent="LobbyScreen/VBox"]
 layout_mode = 2
 text = "Cheats Access"
 
-[node name="CheatsModeOpt" type="OptionButton" parent="LobbyPanel/VBox"]
+[node name="CheatsModeOpt" type="OptionButton" parent="LobbyScreen/VBox"]
 layout_mode = 2
 
-[node name="SeedLabel" type="Label" parent="LobbyPanel/VBox"]
+[node name="SeedLabel" type="Label" parent="LobbyScreen/VBox"]
 layout_mode = 2
 text = "World Seed (blank = random)"
 
-[node name="SeedInput" type="LineEdit" parent="LobbyPanel/VBox"]
+[node name="SeedInput" type="LineEdit" parent="LobbyScreen/VBox"]
 layout_mode = 2
 placeholder_text = "optional seed"
 
-[node name="BtnStart" type="Button" parent="LobbyPanel/VBox"]
+[node name="BtnStart" type="Button" parent="LobbyScreen/VBox"]
 layout_mode = 2
 text = "Start Game"
 
-[node name="BtnCancel" type="Button" parent="LobbyPanel/VBox"]
+[node name="BtnCancel" type="Button" parent="LobbyScreen/VBox"]
 layout_mode = 2
 text = "Back"
 
-[node name="OptionsPanel" type="PanelContainer" parent="."]
+[node name="OptionsScreen" type="Control" parent="."]
 visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="OptionsScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.10, 0.14, 1)
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="OptionsScreen"]
 layout_mode = 1
 anchor_left = 0.5
 anchor_top = 0.5
@@ -193,23 +249,20 @@ offset_bottom = 150.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="OptionsPanel"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="OptionsPanel/VBox"]
+[node name="Label" type="Label" parent="OptionsScreen/VBox"]
 layout_mode = 2
 text = "Options (coming soon)"
 
-[node name="BtnBack" type="Button" parent="OptionsPanel/VBox"]
+[node name="BtnBack" type="Button" parent="OptionsScreen/VBox"]
 layout_mode = 2
 text = "Back"
 
-[connection signal="pressed" from="MainPanel/BtnHost" to="." method="_on_host_pressed"]
-[connection signal="pressed" from="MainPanel/BtnJoin" to="." method="_on_join_pressed"]
-[connection signal="pressed" from="MainPanel/BtnOptions" to="." method="_on_options_pressed"]
-[connection signal="pressed" from="MainPanel/BtnQuit" to="." method="_on_quit_pressed"]
-[connection signal="pressed" from="JoinPanel/VBox/BtnConnect" to="." method="_on_connect_pressed"]
-[connection signal="pressed" from="JoinPanel/VBox/BtnCancel" to="." method="_on_join_cancel_pressed"]
-[connection signal="pressed" from="LobbyPanel/VBox/BtnStart" to="." method="_on_start_pressed"]
-[connection signal="pressed" from="LobbyPanel/VBox/BtnCancel" to="." method="_on_lobby_cancel_pressed"]
-[connection signal="pressed" from="OptionsPanel/VBox/BtnBack" to="." method="_on_options_back_pressed"]
+[connection signal="pressed" from="MainScreen/MainPanel/BtnHost" to="." method="_on_host_pressed"]
+[connection signal="pressed" from="MainScreen/MainPanel/BtnJoin" to="." method="_on_join_pressed"]
+[connection signal="pressed" from="MainScreen/MainPanel/BtnOptions" to="." method="_on_options_pressed"]
+[connection signal="pressed" from="MainScreen/MainPanel/BtnQuit" to="." method="_on_quit_pressed"]
+[connection signal="pressed" from="JoinScreen/VBox/BtnConnect" to="." method="_on_connect_pressed"]
+[connection signal="pressed" from="JoinScreen/VBox/BtnCancel" to="." method="_on_join_cancel_pressed"]
+[connection signal="pressed" from="LobbyScreen/VBox/BtnStart" to="." method="_on_start_pressed"]
+[connection signal="pressed" from="LobbyScreen/VBox/BtnCancel" to="." method="_on_lobby_cancel_pressed"]
+[connection signal="pressed" from="OptionsScreen/VBox/BtnBack" to="." method="_on_options_back_pressed"]
