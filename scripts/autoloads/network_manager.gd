@@ -31,6 +31,10 @@ func _ready() -> void:
 # ── Hosting ──────────────────────────────────────────────────────────────────
 
 func host(name: String) -> bool:
+	# Release any existing peer/port before creating a new server
+	multiplayer.multiplayer_peer = null
+	_stop_beacon()
+
 	session_name = name
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_server(GAME_PORT)
@@ -93,6 +97,7 @@ func _poll_discovery() -> void:
 # ── Joining ───────────────────────────────────────────────────────────────────
 
 func join(ip: String, port: int = GAME_PORT) -> void:
+	multiplayer.multiplayer_peer = null
 	stop_discovery()
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_client(ip, port)
