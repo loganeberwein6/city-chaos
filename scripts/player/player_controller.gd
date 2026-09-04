@@ -23,7 +23,7 @@ var weapon_slots: Array[Dictionary] = []  # [{id, ammo, reserve}, ...]
 
 # ── Camera ─────────────────────────────────────────────────────────────────────
 @export var camera_sensitivity := 0.003
-@export var camera_min_pitch   := -60.0
+@export var camera_min_pitch   := -10.0
 @export var camera_max_pitch   := 75.0
 @export var camera_distance    := 6.0
 
@@ -59,6 +59,7 @@ func _ready() -> void:
 	spring_arm.spring_length = camera_distance
 	spring_arm.rotation.x = _cam_pitch
 	spring_arm.add_excluded_object(get_rid())
+	spring_arm.collision_mask = 0
 	if _is_local:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		camera.current = true
@@ -130,7 +131,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _rotate_camera(delta: Vector2) -> void:
 	rotate_y(-delta.x * camera_sensitivity)
-	_cam_pitch = clampf(_cam_pitch - delta.y * camera_sensitivity, deg_to_rad(camera_min_pitch), deg_to_rad(camera_max_pitch))
+	_cam_pitch = clampf(_cam_pitch + delta.y * camera_sensitivity, deg_to_rad(camera_min_pitch), deg_to_rad(camera_max_pitch))
 	spring_arm.rotation.x = _cam_pitch
 
 # ── Physics ────────────────────────────────────────────────────────────────────
