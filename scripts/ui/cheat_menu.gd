@@ -107,15 +107,15 @@ func cheat_spawn_civ() -> void:
 	var p := _local_player()
 	if not p: return
 	var s := preload("res://scenes/npc/civilian.tscn").instantiate()
-	s.global_position = p.global_position + Vector3(2, 0, 2)
 	get_tree().root.add_child(s)
+	s.global_position = p.global_position + Vector3(2, 0, 2)
 
 func cheat_spawn_cop() -> void:
 	var p := _local_player()
 	if not p: return
 	var s := preload("res://scenes/npc/police_officer.tscn").instantiate()
-	s.global_position = p.global_position + Vector3(3, 0, 0)
 	get_tree().root.add_child(s)
+	s.global_position = p.global_position + Vector3(3, 0, 0)
 
 func cheat_kill_npcs() -> void:
 	for npc in get_tree().get_nodes_in_group("npcs"):

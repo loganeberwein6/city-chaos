@@ -106,7 +106,8 @@ func _spawn_at(pos: Vector3) -> void:
 	_vehicle_ids[v] = vid
 	v.tree_exited.connect(func():
 		if _vehicle_ids.has(v):
-			_rpc_despawn_vehicle.rpc(_vehicle_ids[v])
+			if is_inside_tree():
+				_rpc_despawn_vehicle.rpc(_vehicle_ids[v])
 			_vehicle_ids.erase(v)
 	)
 	_rpc_spawn_vehicle.rpc(vid, vtype, pos)

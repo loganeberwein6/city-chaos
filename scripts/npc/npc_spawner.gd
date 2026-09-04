@@ -110,7 +110,8 @@ func _spawn_at(pos: Vector3) -> void:
 	_npc_ids[npc] = nid
 	npc.tree_exited.connect(func():
 		if _npc_ids.has(npc):
-			_rpc_despawn_npc.rpc(_npc_ids[npc])
+			if is_inside_tree():
+				_rpc_despawn_npc.rpc(_npc_ids[npc])
 			_npc_ids.erase(npc)
 	)
 	_rpc_spawn_npc.rpc(nid, type, pos)

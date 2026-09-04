@@ -1,11 +1,9 @@
-name: Version bump & build launcher
+name: Build Run Game.exe
 
 on:
   push:
     branches: [main]
     paths-ignore:
-      - 'version.txt'
-      - 'Update Game.exe'
       - 'Run Game.exe'
       - '.github/**'
 
@@ -13,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  bump-and-build:
+  build:
     runs-on: windows-latest
 
     steps:
@@ -22,26 +20,10 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Increment version.txt
-        id: ver
-        shell: bash
-        run: |
-          V=$(cat version.txt 2>/dev/null || echo 0)
-          NEW=$((V + 1))
-          echo $NEW > version.txt
-          echo "new=$NEW" >> $GITHUB_OUTPUT
-          echo "Bumped to v$NEW"
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: Build Update Game.exe
-        shell: bash
-        run: |
-          dotnet build launcher/launcher.csproj -c Release -o build/updater
-          cp "build/updater/Update Game.exe" "Update Game.exe"
 
       - name: Build Run Game.exe
         shell: bash
@@ -54,8 +36,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add version.txt "Update Game.exe" "Run Game.exe"
+          git add "Run Game.exe"
           git diff --cached --quiet || {
-            git commit -m "v${{ steps.ver.outputs.new }} [skip ci]"
+            git commit -m "build: update Run Game.exe [skip ci]"
             git push
           }

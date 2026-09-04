@@ -1,25 +1,17 @@
-// Run Game.exe — silent updater that can replace Update Game.exe (since it's not running).
-// Update Game.exe runs separately with a GUI and can replace Run Game.exe.
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+
 class RunGame
 {
     static void Main()
     {
-        try
-        {
-            int local  = Game.ReadLocalVersion();
-            int remote = Game.FetchRemoteVersion();
-            if (remote > local)
-            {
-                Game.DownloadAndApply();
-                Game.WriteLocalVersion(remote);
-                Game.RecordResult(downloaded: true, fromVer: local, toVer: remote);
-            }
-            else
-            {
-                Game.RecordResult(downloaded: false, fromVer: local, toVer: local);
-            }
-        }
-        catch { }
-        Game.Launch();
+        string dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        string[] exes = Directory.GetFiles(dir, "Godot_v*.exe");
+        if (exes.Length == 0) return;
+        Array.Sort(exes);
+        Process.Start(new ProcessStartInfo(exes[exes.Length - 1], "--path .")
+            { WorkingDirectory = dir, UseShellExecute = true });
     }
 }

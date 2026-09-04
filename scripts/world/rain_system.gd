@@ -14,7 +14,6 @@ func _build_particles() -> void:
 	_particles.lifetime = 1.2
 	_particles.preprocess = 1.0
 	_particles.fixed_fps = 30
-	_particles.emit_unit = GPUParticles3D.EMIT_UNIT_DISABLED
 
 	var mat := ParticleProcessMaterial.new()
 	mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX

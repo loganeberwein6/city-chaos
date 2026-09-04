@@ -52,7 +52,7 @@ func _explode(killer_id: int) -> void:
 		if p and is_instance_valid(p):
 			var dist := global_position.distance_to(p.global_position)
 			if dist < radius:
-				var dmg := lerp(200.0, 20.0, dist / radius)
+				var dmg: float = lerp(200.0, 20.0, dist / radius)
 				p.take_damage(dmg, killer_id)
 	queue_free()
 
