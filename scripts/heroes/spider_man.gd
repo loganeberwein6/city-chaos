@@ -1,73 +1,82 @@
 extends Node
-class_name SpiderManHero
 
-const WEB_RANGE     := 80.0
-const WEB_SPEED     := 22.0
-const WEB_ZIP_SPEED := 35.0
+# Spider-Man hero component — attached as child of player_controller.
+# Abilities: Web Swing (Q), Web Zip (E — ground only).
 
-var _swinging    := false
-var _swing_pt    := Vector3.ZERO
-var _zip_target  := Vector3.ZERO
-var _zipping     := false
+const WEB_SWING_RANGE := 30.0
+const WEB_ZIP_RANGE   := 15.0
+const SWING_ACCEL     := 18.0  # pull acceleration toward anchor (units/s²)
+const ZIP_SPEED       := 25.0
 
-@onready var _player: CharacterBody3D = get_parent()
+var _swinging  := false
+var _swing_pt  := Vector3.ZERO
 
-func _ready() -> void:
-	add_to_group("hero_component")
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ability_1"):
-		_try_web_swing()
-	if event.is_action_pressed("ability_2"):
-		_try_web_zip()
-	if event.is_action_released("ability_1"):
-		_swinging = false
-	if event.is_action_released("ability_2"):
-		_zipping = false
+func get_stat_overrides() -> Dictionary:
+	return {
+		"walk_speed":    6.0,
+		"sprint_speed":  12.0,
+		"jump_velocity": 11.0,
+		"max_health":    100.0,
+	}
 
 func _physics_process(delta: float) -> void:
-	if _zipping:
-		_tick_zip(delta)
-	elif _swinging:
-		_tick_swing(delta)
+	var player: Node = get_parent()
+	if not player.get("_is_local"):
+		return
+	if _swinging:
+		_tick_swing(player as CharacterBody3D, delta)
 
-func _raycast_from_camera() -> Dictionary:
-	var cam: Camera3D = _player.get_node("SpringArm3D/Camera3D")
+func _unhandled_input(event: InputEvent) -> void:
+	var player: Node = get_parent()
+	if not player.get("_is_local"):
+		return
+
+	# Web Swing — Q press/release
+	if event.is_action_pressed("ability_1"):
+		_try_web_swing(player)
+	if event.is_action_released("ability_1"):
+		_swinging = false
+
+	# Web Zip — E press (ground only)
+	if event.is_action_pressed("ability_2"):
+		var cb: CharacterBody3D = player as CharacterBody3D
+		if cb and cb.is_on_floor():
+			_try_web_zip(player, cb)
+
+func _raycast_from_camera(player: Node, range_dist: float) -> Dictionary:
+	var cam: Camera3D = player.get_node("SpringArm3D/Camera3D")
 	var from := cam.global_position
-	var to   := from + (-cam.global_transform.basis.z) * WEB_RANGE
-	var q := PhysicsRayQueryParameters3D.create(from, to)
-	q.exclude = [_player]
-	return _player.get_world_3d().direct_space_state.intersect_ray(q)
+	var to   := from + (-cam.global_transform.basis.z) * range_dist
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	query.exclude = [player.get_rid()]
+	return (player as Node3D).get_world_3d().direct_space_state.intersect_ray(query)
 
-func _try_web_swing() -> void:
-	var result := _raycast_from_camera()
+func _try_web_swing(player: Node) -> void:
+	var result := _raycast_from_camera(player, WEB_SWING_RANGE)
 	if result:
 		_swing_pt = result["position"]
 		_swinging = true
-		_zipping  = false
 
-func _try_web_zip() -> void:
-	var result := _raycast_from_camera()
-	if result:
-		_zip_target = result["position"]
-		_zipping = true
+func _tick_swing(cb: CharacterBody3D, delta: float) -> void:
+	if cb == null or cb.is_on_floor():
 		_swinging = false
-
-func _tick_swing(delta: float) -> void:
-	# Pendulum approximation: pull toward anchor, preserve momentum
-	var to_anchor := _swing_pt - _player.global_position
-	var len := to_anchor.length()
-	if len < 2.0: return
-	var pull := to_anchor.normalized() * (len - 8.0) * 5.0
-	pull.y = absf(pull.y) * 0.5  # reduce downward pull during swing
-	_player.velocity += pull * delta
-
-func _tick_zip(delta: float) -> void:
-	var dir := (_zip_target - _player.global_position)
-	if dir.length() < 1.5:
-		_zipping = false
 		return
-	_player.velocity = dir.normalized() * WEB_ZIP_SPEED
+	# Accelerate player toward the swing anchor point over ~1 second
+	var to_anchor := _swing_pt - cb.global_position
+	var dist := to_anchor.length()
+	if dist < 1.5:
+		_swinging = false
+		return
+	var pull := to_anchor.normalized() * SWING_ACCEL
+	cb.velocity += pull * delta
 
-func get_stat_overrides() -> Dictionary:
-	return {"walk_speed": 6.0, "sprint_speed": 12.0, "jump_velocity": 14.0}
+func _try_web_zip(player: Node, cb: CharacterBody3D) -> void:
+	var result := _raycast_from_camera(player, WEB_ZIP_RANGE)
+	var target: Vector3
+	if result:
+		target = result["position"]
+	else:
+		var cam: Camera3D = player.get_node("SpringArm3D/Camera3D")
+		var fwd := -cam.global_transform.basis.z
+		target = cb.global_position + fwd * WEB_ZIP_RANGE
+	cb.global_position = target

@@ -1,59 +1,100 @@
 extends Node
-class_name IronManHero
 
-const FLY_ACCEL   := 30.0
-const FLY_MAX     := 35.0
-const REPULSOR_DMG := 80.0
-const REPULSOR_CD  := 0.8
-const HOVER_GRAVITY := 3.0
+# Iron Man hero component — attached as child of player_controller.
+# Abilities: Flight (double-jump toggle), Repulsor blast (Q — knockback only).
 
-var _flying    := false
+const FLY_SPEED        := 15.0
+const FLY_UP_SPEED     := 8.0
+const FLY_DOWN_SPEED   := 8.0
+const REPULSOR_RANGE   := 20.0
+const REPULSOR_FORCE   := 30.0
+const REPULSOR_COOLDOWN := 0.8
+
+var _flying     := false
+var _jump_count := 0
 var _repulsor_cd := 0.0
 
-@onready var _player: CharacterBody3D = get_parent()
-
-func _ready() -> void:
-	add_to_group("hero_component")
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("jump") and not _player.is_on_floor():
-		_flying = not _flying
-	if event.is_action_pressed("shoot") and _repulsor_cd <= 0.0:
-		_fire_repulsor()
+func get_stat_overrides() -> Dictionary:
+	return {
+		"walk_speed":    6.0,
+		"sprint_speed":  10.0,
+		"jump_velocity": 12.0,
+		"max_health":    150.0,
+	}
 
 func _physics_process(delta: float) -> void:
+	var player: Node = get_parent()
+	if not player.get("_is_local"):
+		return
+
 	_repulsor_cd = maxf(0.0, _repulsor_cd - delta)
-	if _flying: _tick_flight(delta)
 
-func _tick_flight(delta: float) -> void:
-	# WASD moves in camera direction, space/ctrl for up/down
-	var cam: Camera3D = _player.get_node("SpringArm3D/Camera3D")
-	var wish := Vector3.ZERO
-	if Input.is_action_pressed("move_forward"):  wish -= cam.global_transform.basis.z
-	if Input.is_action_pressed("move_back"):     wish += cam.global_transform.basis.z
-	if Input.is_action_pressed("move_left"):     wish -= cam.global_transform.basis.x
-	if Input.is_action_pressed("move_right"):    wish += cam.global_transform.basis.x
-	if Input.is_action_pressed("jump"):          wish.y += 1.0
-	if Input.is_action_pressed("crouch"):        wish.y -= 1.0
+	var cb: CharacterBody3D = player as CharacterBody3D
+	if cb == null:
+		return
 
-	wish = wish.normalized()
-	_player.velocity = _player.velocity.move_toward(wish * FLY_MAX, FLY_ACCEL * delta)
-	if wish == Vector3.ZERO:
-		_player.velocity.y = move_toward(_player.velocity.y, 0.0, HOVER_GRAVITY * delta)
+	# Reset jump count on landing
+	if cb.is_on_floor():
+		_jump_count = 0
+		if _flying:
+			_flying = false
 
-	if _player.is_on_floor():
+	if _flying:
+		_tick_flight(cb)
+
+func _unhandled_input(event: InputEvent) -> void:
+	var player: Node = get_parent()
+	if not player.get("_is_local"):
+		return
+
+	# Track jump presses for double-jump detection
+	if event.is_action_pressed("jump"):
+		var cb: CharacterBody3D = player as CharacterBody3D
+		if cb == null:
+			return
+		if not cb.is_on_floor():
+			_jump_count += 1
+			if _jump_count >= 2:
+				_flying = true
+		else:
+			_jump_count = 1  # first jump (on floor → airborne next frame)
+
+	# Toggle flight off with E
+	if event.is_action_pressed("ability_2") and _flying:
 		_flying = false
 
-func _fire_repulsor() -> void:
-	_repulsor_cd = REPULSOR_CD
-	var cam: Camera3D = _player.get_node("SpringArm3D/Camera3D")
-	var from := cam.global_position
-	var to   := from + (-cam.global_transform.basis.z) * 200.0
-	var q := PhysicsRayQueryParameters3D.create(from, to)
-	q.exclude = [_player]
-	var result := _player.get_world_3d().direct_space_state.intersect_ray(q)
-	if result and result["collider"].has_method("take_damage"):
-		result["collider"].take_damage(REPULSOR_DMG, multiplayer.get_unique_id())
+	# Repulsor blast — Q press
+	if event.is_action_pressed("ability_1") and _repulsor_cd <= 0.0:
+		_fire_repulsor(player)
 
-func get_stat_overrides() -> Dictionary:
-	return {"walk_speed": 5.0, "sprint_speed": 9.0, "jump_velocity": 14.0}
+func _tick_flight(cb: CharacterBody3D) -> void:
+	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var dir := Vector3(input_dir.x, 0.0, input_dir.y)
+	dir = cb.transform.basis * dir
+	dir.y = 0.0
+	if dir.length_squared() > 0.01:
+		dir = dir.normalized()
+
+	var vy := 0.0
+	if Input.is_action_pressed("jump"):
+		vy = FLY_UP_SPEED
+	elif Input.is_action_pressed("brake"):
+		vy = -FLY_DOWN_SPEED
+
+	cb.velocity = dir * FLY_SPEED + Vector3(0.0, vy, 0.0)
+
+func _fire_repulsor(player: Node) -> void:
+	_repulsor_cd = REPULSOR_COOLDOWN
+	var cam: Camera3D = player.get_node("SpringArm3D/Camera3D")
+	var from := cam.global_position
+	var to   := from + (-cam.global_transform.basis.z) * REPULSOR_RANGE
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	query.exclude = [player.get_rid()]
+	var result := (player as Node3D).get_world_3d().direct_space_state.intersect_ray(query)
+	if not result:
+		return
+	var hit: Object = result["collider"]
+	# Knockback only — push the hit body away, no damage
+	if hit is CharacterBody3D:
+		var push_dir := (result["position"] - from).normalized()
+		(hit as CharacterBody3D).velocity += push_dir * REPULSOR_FORCE

@@ -1,66 +1,105 @@
 extends Node
-class_name HulkHero
 
-const THROW_RANGE  := 6.0
-const THROW_FORCE  := 28.0
-const SLAM_RADIUS  := 8.0
-const SLAM_DMG     := 150.0
-const SLAM_COOLDOWN := 4.0
+# Hulk hero component — attached as child of player_controller.
+# Abilities: Ground Slam (Q while in air), Grab/Throw (E near NPC).
 
-var _slam_cd := 0.0
-var _grab_target: Node3D = null
+const SLAM_DIVE_SPEED  := 40.0
+const SLAM_RADIUS      := 5.0
+const SLAM_DAMAGE      := 50.0
+const GRAB_RANGE       := 3.0
+const THROW_SPEED      := 20.0
 
-@onready var _player: CharacterBody3D = get_parent()
-
-func _ready() -> void:
-	add_to_group("hero_component")
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ability_1"):
-		if _grab_target: _throw()
-		else: _try_grab()
-	if event.is_action_pressed("ability_2") and _slam_cd <= 0.0:
-		_ground_slam()
-
-func _physics_process(delta: float) -> void:
-	_slam_cd = maxf(0.0, _slam_cd - delta)
-	if _grab_target and is_instance_valid(_grab_target):
-		# Carry grabbed NPC in front of player
-		_grab_target.global_position = _player.global_position + (-_player.global_transform.basis.z) * 2.0 + Vector3(0, 1.5, 0)
-
-func _try_grab() -> void:
-	for npc in get_tree().get_nodes_in_group("npcs"):
-		var nb := npc as NpcBase
-		if nb and nb.state != NpcBase.State.DEAD:
-			if _player.global_position.distance_to(nb.global_position) < THROW_RANGE:
-				_grab_target = nb
-				nb.set_physics_process(false)
-				return
-
-func _throw() -> void:
-	if _grab_target == null: return
-	var tgt := _grab_target
-	_grab_target = null
-	tgt.set_physics_process(true)
-	var cam: Camera3D = _player.get_node("SpringArm3D/Camera3D")
-	var dir := (-cam.global_transform.basis.z + Vector3(0, 0.4, 0)).normalized()
-	tgt.velocity = dir * THROW_FORCE * 3.0
-	if tgt.has_method("take_damage"):
-		tgt.take_damage(50.0, multiplayer.get_unique_id())
-
-func _ground_slam() -> void:
-	_slam_cd = SLAM_COOLDOWN
-	# Damage all NPCs and players within radius
-	var origin := _player.global_position
-	for npc in get_tree().get_nodes_in_group("npcs"):
-		var dist := origin.distance_to(npc.global_position)
-		if dist < SLAM_RADIUS and npc.has_method("take_damage"):
-			var dmg := lerp(SLAM_DMG, 20.0, dist / SLAM_RADIUS)
-			npc.take_damage(dmg, multiplayer.get_unique_id())
-	# Camera shake via HUD
-	var hud := get_tree().get_first_node_in_group("hud")
-	if hud and hud.has_method("camera_shake"):
-		hud.camera_shake(0.4)
+var _slam_pending  := false   # true after Q pressed in air, waiting for landing
+var _held_npc: Node3D = null
 
 func get_stat_overrides() -> Dictionary:
-	return {"walk_speed": 7.0, "sprint_speed": 14.0, "jump_velocity": 18.0, "max_health": 400.0}
+	return {
+		"walk_speed":    5.0,
+		"sprint_speed":  8.0,
+		"jump_velocity": 14.0,
+		"max_health":    400.0,
+	}
+
+func _physics_process(_delta: float) -> void:
+	var player: Node = get_parent()
+	if not player.get("_is_local"):
+		return
+
+	var cb: CharacterBody3D = player as CharacterBody3D
+	if cb == null:
+		return
+
+	# Carry held NPC in front of player
+	if _held_npc != null and is_instance_valid(_held_npc):
+		_held_npc.global_position = cb.global_position + (-cb.global_transform.basis.z) * 2.0 + Vector3(0.0, 1.2, 0.0)
+
+	# Detect landing after ground slam
+	if _slam_pending and cb.is_on_floor():
+		_slam_pending = false
+		_do_slam_shockwave(cb)
+
+func _unhandled_input(event: InputEvent) -> void:
+	var player: Node = get_parent()
+	if not player.get("_is_local"):
+		return
+
+	var cb: CharacterBody3D = player as CharacterBody3D
+	if cb == null:
+		return
+
+	# Ground Slam — Q while in air
+	if event.is_action_pressed("ability_1"):
+		if not cb.is_on_floor() and not _slam_pending:
+			_slam_pending = true
+			cb.velocity.y = -SLAM_DIVE_SPEED
+
+	# Grab / Throw — E
+	if event.is_action_pressed("ability_2"):
+		if _held_npc != null and is_instance_valid(_held_npc):
+			_throw_npc(player, cb)
+		else:
+			_try_grab(cb)
+
+func _try_grab(cb: CharacterBody3D) -> void:
+	var cam_node: Node = cb.get_node("SpringArm3D/Camera3D")
+	var cam: Camera3D = cam_node as Camera3D
+	if cam == null:
+		return
+	var from := cam.global_position
+	var to   := from + (-cam.global_transform.basis.z) * GRAB_RANGE
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	query.exclude = [cb.get_rid()]
+	var result := cb.get_world_3d().direct_space_state.intersect_ray(query)
+	if not result:
+		return
+	var hit: Object = result["collider"]
+	if hit is Node3D and hit != cb:
+		_held_npc = hit as Node3D
+		if _held_npc.has_method("set_physics_process"):
+			_held_npc.set_physics_process(false)
+
+func _throw_npc(player: Node, cb: CharacterBody3D) -> void:
+	var tgt: Node3D = _held_npc
+	_held_npc = null
+	if tgt == null or not is_instance_valid(tgt):
+		return
+	if tgt.has_method("set_physics_process"):
+		tgt.set_physics_process(true)
+	var cam: Camera3D = player.get_node("SpringArm3D/Camera3D")
+	var forward := (-cam.global_transform.basis.z + Vector3(0.0, 0.3, 0.0)).normalized()
+	if tgt is CharacterBody3D:
+		(tgt as CharacterBody3D).velocity = forward * THROW_SPEED
+	if tgt.has_method("take_damage"):
+		tgt.call("take_damage", 30.0, multiplayer.get_unique_id())
+
+func _do_slam_shockwave(cb: CharacterBody3D) -> void:
+	var origin := cb.global_position
+	# Damage players within radius
+	for p in cb.get_tree().get_nodes_in_group("players"):
+		if p == cb:
+			continue
+		if not is_instance_valid(p):
+			continue
+		if origin.distance_to((p as Node3D).global_position) <= SLAM_RADIUS:
+			if p.has_method("take_damage"):
+				p.call("take_damage", SLAM_DAMAGE, multiplayer.get_unique_id())
