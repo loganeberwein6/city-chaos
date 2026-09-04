@@ -36,6 +36,7 @@ var weapon_slots: Array[Dictionary] = []  # [{id, ammo, reserve}, ...]
 @onready var weapon_mesh_root: Node3D      = $WeaponMeshRoot
 
 var _cam_pitch := deg_to_rad(-20.0)
+var _cam_yaw   := 0.0
 var _is_local  := false
 
 # ── Death camera ───────────────────────────────────────────────────────────────
@@ -136,7 +137,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_select_weapon_slot(i)
 
 func _rotate_camera(delta: Vector2) -> void:
-	rotate_y(-delta.x * camera_sensitivity)
+	_cam_yaw -= delta.x * camera_sensitivity
+	spring_arm.rotation.y = _cam_yaw
 	_cam_pitch = clampf(_cam_pitch - delta.y * camera_sensitivity, deg_to_rad(camera_min_pitch), deg_to_rad(camera_max_pitch))
 	spring_arm.rotation.x = _cam_pitch
 
@@ -173,7 +175,8 @@ func _apply_vehicle_input() -> void:
 
 func _apply_movement(delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var move_dir := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	var cam_yaw_basis := Basis(Vector3.UP, _cam_yaw)
+	var move_dir := (cam_yaw_basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	var target_speed := sprint_speed if Input.is_action_pressed("sprint") else walk_speed
 	var ctrl := 1.0 if is_on_floor() else air_control
 
@@ -189,14 +192,14 @@ func _apply_movement(delta: float) -> void:
 
 func _sync_position() -> void:
 	if Engine.get_physics_frames() % 2 == 0:
-		_rpc_sync.rpc(global_position, global_rotation, velocity)
+		_rpc_sync.rpc(global_position, mesh_root.rotation.y, velocity)
 
 @rpc("any_peer", "unreliable_ordered", "call_remote")
-func _rpc_sync(pos: Vector3, rot: Vector3, vel: Vector3) -> void:
+func _rpc_sync(pos: Vector3, mesh_yaw: float, vel: Vector3) -> void:
 	if _is_local:
 		return
 	global_position = global_position.lerp(pos, 0.3)
-	global_rotation = rot
+	mesh_root.rotation.y = lerp_angle(mesh_root.rotation.y, mesh_yaw, 0.3)
 	velocity = vel
 
 # ── Combat ─────────────────────────────────────────────────────────────────────
