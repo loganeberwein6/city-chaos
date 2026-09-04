@@ -2,18 +2,15 @@ extends Node3D
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
 
-@onready var world_gen:    Node3D      = $WorldGenerator
-@onready var players_root: Node3D      = $PlayersRoot
-@onready var _loading:     CanvasLayer = $LoadingOverlay
+@onready var world_gen:    Node3D = $WorldGenerator
+@onready var players_root: Node3D = $PlayersRoot
 
 func _ready() -> void:
 	var seed_val: int    = GameManager.rules.get("world_seed", randi())
 	var map_size: String = GameManager.rules.get("map_size", "medium")
 
-	# generate() is synchronous — spawn points are ready when it returns
 	world_gen.call("generate", seed_val, map_size)
 	_spawn_local_player()
-	_loading.visible = false
 
 	if multiplayer.is_server():
 		_rpc_sync_world.rpc(seed_val, map_size)
@@ -25,7 +22,6 @@ func _ready() -> void:
 func _rpc_sync_world(seed_val: int, map_size: String) -> void:
 	world_gen.call("generate", seed_val, map_size)
 	_spawn_local_player()
-	_loading.visible = false
 
 func _spawn_local_player() -> void:
 	var my_id: int = multiplayer.get_unique_id()

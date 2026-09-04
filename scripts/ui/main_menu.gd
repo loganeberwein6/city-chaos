@@ -2,6 +2,8 @@ extends Control
 
 var _discovered: Array[Dictionary] = []
 
+const _SAVE_PATH := "user://player_config.cfg"
+
 func _ready() -> void:
 	var map_opt := $LobbyScreen/VBox/MapSize as OptionButton
 	if map_opt:
@@ -17,11 +19,26 @@ func _ready() -> void:
 			cheats_opt.add_item(s)
 		cheats_opt.select(0)
 
+	_load_name()
+
 	NetworkManager.server_found.connect(_on_server_found)
 	NetworkManager.connected_to_host.connect(_on_connected)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 
 	_show("Main")
+
+func _load_name() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(_SAVE_PATH) != OK:
+		return
+	var saved: String = cfg.get_value("player", "name", "")
+	if saved != "":
+		($LobbyScreen/VBox/NameInput as LineEdit).text = saved
+
+func _save_name(pname: String) -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("player", "name", pname)
+	cfg.save(_SAVE_PATH)
 
 # ── Panel switching ─────────────────────────────────────────────────────────
 
@@ -77,6 +94,7 @@ func _on_start_pressed() -> void:
 	GameManager.rules["world_seed"]  = world_seed
 	GameManager.rules["cheats_mode"] = cheats_mode
 	if NetworkManager.host(pname):
+		_save_name(pname)
 		NetworkManager.register_self(pname, "normal_person")
 		get_tree().change_scene_to_file("res://scenes/game.tscn")
 	else:
@@ -98,6 +116,7 @@ func _on_server_found(info: Dictionary) -> void:
 func _on_connected() -> void:
 	var pname := ($LobbyScreen/VBox/NameInput as LineEdit).text.strip_edges()
 	if pname == "": pname = "Player"
+	_save_name(pname)
 	NetworkManager.register_self(pname, "normal_person")
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
 

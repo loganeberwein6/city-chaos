@@ -57,6 +57,7 @@ script = ExtResource("7")
 script = ExtResource("8")
 
 [node name="LoadingOverlay" type="CanvasLayer" parent="."]
+visible = false
 layer = 100
 
 [node name="Bg" type="ColorRect" parent="LoadingOverlay"]
