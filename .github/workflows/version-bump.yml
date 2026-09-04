@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - 'version.txt'
       - 'Update Game.exe'
+      - 'Run Game.exe'
       - '.github/**'
 
 permissions:
@@ -31,24 +32,22 @@ jobs:
           echo "new=$NEW" >> $GITHUB_OUTPUT
           echo "Bumped to v$NEW"
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
       - name: Build Update Game.exe
-        shell: cmd
+        shell: bash
         run: |
-          "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" ^
-            /target:exe ^
-            /reference:System.Windows.Forms.dll ^
-            /reference:System.IO.Compression.dll ^
-            /reference:System.IO.Compression.FileSystem.dll ^
-            /out:"Update Game.exe" ^
-            UpdaterSrc.cs
+          dotnet build launcher/launcher.csproj -c Release -o build/updater
+          cp "build/updater/Update Game.exe" "Update Game.exe"
 
       - name: Build Run Game.exe
-        shell: cmd
+        shell: bash
         run: |
-          "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" ^
-            /target:exe ^
-            /out:"Run Game.exe" ^
-            RunGameSrc.cs
+          dotnet build launcher/rungame.csproj -c Release -o build/rungame
+          cp "build/rungame/Run Game.exe" "Run Game.exe"
 
       - name: Commit & push
         shell: bash
