@@ -23,8 +23,8 @@ var weapon_slots: Array[Dictionary] = []  # [{id, ammo, reserve}, ...]
 
 # ── Camera ─────────────────────────────────────────────────────────────────────
 @export var camera_sensitivity := 0.003
-@export var camera_min_pitch   := -80.0
-@export var camera_max_pitch   := 15.0
+@export var camera_min_pitch   := -90.0
+@export var camera_max_pitch   := 90.0
 @export var camera_distance    := 6.0
 
 @onready var spring_arm: SpringArm3D  = $SpringArm3D
@@ -167,7 +167,7 @@ func _apply_vehicle_input() -> void:
 
 func _apply_movement(delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var move_dir := (transform.basis * Vector3(-input_dir.x, 0, -input_dir.y)).normalized()
+	var move_dir := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	var target_speed := sprint_speed if Input.is_action_pressed("sprint") else walk_speed
 	var ctrl := 1.0 if is_on_floor() else air_control
 
