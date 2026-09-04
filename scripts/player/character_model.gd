@@ -57,28 +57,28 @@ static func _build_humanoid(
 	_mi(root, _sphere(0.115 * s),                         skin,  Vector3(0,        1.72 * s, 0))
 	# Neck
 	_mi(root, _cylinder(0.048 * s, 0.09 * s),             skin,  Vector3(0,        1.615 * s, 0))
-	# Torso
-	_mi(root, _box(0.34 * s, 0.46 * s, 0.19 * s),         shirt, Vector3(0,        1.28 * s, 0))
+	# Torso (named for idle-breath animation)
+	_mi(root, _box(0.34 * s, 0.46 * s, 0.19 * s),         shirt, Vector3(0,        1.28 * s, 0)).name = "Torso"
 	# Pelvis
 	_mi(root, _box(0.30 * s, 0.18 * s, 0.17 * s),         pants, Vector3(0,        0.88 * s, 0))
 	# Shoulder pads
 	_mi(root, _box(0.10 * s, 0.08 * s, 0.10 * s),         shirt, Vector3(-0.22 * s, 1.50 * s, 0))
 	_mi(root, _box(0.10 * s, 0.08 * s, 0.10 * s),         shirt, Vector3( 0.22 * s, 1.50 * s, 0))
-	# Upper arms
-	_mi(root, _capsule(0.055 * s, 0.26 * s),              shirt, Vector3(-0.25 * s, 1.22 * s, 0))
-	_mi(root, _capsule(0.055 * s, 0.26 * s),              shirt, Vector3( 0.25 * s, 1.22 * s, 0))
-	# Lower arms
-	_mi(root, _capsule(0.045 * s, 0.24 * s),              shirt, Vector3(-0.26 * s, 0.94 * s, 0))
-	_mi(root, _capsule(0.045 * s, 0.24 * s),              shirt, Vector3( 0.26 * s, 0.94 * s, 0))
-	# Hands
-	_mi(root, _box(0.07 * s, 0.055 * s, 0.038 * s),       skin,  Vector3(-0.26 * s, 0.78 * s, 0))
-	_mi(root, _box(0.07 * s, 0.055 * s, 0.038 * s),       skin,  Vector3( 0.26 * s, 0.78 * s, 0))
-	# Upper legs
-	_mi(root, _capsule(0.072 * s, 0.36 * s),              pants, Vector3(-0.10 * s, 0.60 * s, 0))
-	_mi(root, _capsule(0.072 * s, 0.36 * s),              pants, Vector3( 0.10 * s, 0.60 * s, 0))
+	# Upper arms (named for walk & punch animation)
+	_mi(root, _capsule(0.055 * s, 0.26 * s),              shirt, Vector3(-0.25 * s, 1.22 * s, 0)).name = "LUA"
+	_mi(root, _capsule(0.055 * s, 0.26 * s),              shirt, Vector3( 0.25 * s, 1.22 * s, 0)).name = "RUA"
+	# Lower arms (named for punch extension)
+	_mi(root, _capsule(0.045 * s, 0.24 * s),              shirt, Vector3(-0.26 * s, 0.94 * s, 0)).name = "LLA"
+	_mi(root, _capsule(0.045 * s, 0.24 * s),              shirt, Vector3( 0.26 * s, 0.94 * s, 0)).name = "RLA"
+	# Hands (named for punch extension)
+	_mi(root, _box(0.07 * s, 0.055 * s, 0.038 * s),       skin,  Vector3(-0.26 * s, 0.78 * s, 0)).name = "LHand"
+	_mi(root, _box(0.07 * s, 0.055 * s, 0.038 * s),       skin,  Vector3( 0.26 * s, 0.78 * s, 0)).name = "RHand"
+	# Upper legs (named for walk animation)
+	_mi(root, _capsule(0.072 * s, 0.36 * s),              pants, Vector3(-0.10 * s, 0.60 * s, 0)).name = "LUL"
+	_mi(root, _capsule(0.072 * s, 0.36 * s),              pants, Vector3( 0.10 * s, 0.60 * s, 0)).name = "RUL"
 	# Lower legs
-	_mi(root, _capsule(0.058 * s, 0.33 * s),              pants, Vector3(-0.10 * s, 0.26 * s, 0))
-	_mi(root, _capsule(0.058 * s, 0.33 * s),              pants, Vector3( 0.10 * s, 0.26 * s, 0))
+	_mi(root, _capsule(0.058 * s, 0.33 * s),              pants, Vector3(-0.10 * s, 0.26 * s, 0)).name = "LLL"
+	_mi(root, _capsule(0.058 * s, 0.33 * s),              pants, Vector3( 0.10 * s, 0.26 * s, 0)).name = "RLL"
 	# Feet
 	_mi(root, _box(0.09 * s, 0.055 * s, 0.20 * s),        shoe,  Vector3(-0.10 * s, 0.03 * s, 0.04 * s))
 	_mi(root, _box(0.09 * s, 0.055 * s, 0.20 * s),        shoe,  Vector3( 0.10 * s, 0.03 * s, 0.04 * s))

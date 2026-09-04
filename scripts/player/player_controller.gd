@@ -1,7 +1,8 @@
 extends CharacterBody3D
 
-const CharacterModel = preload("res://scripts/player/character_model.gd")
-const WeaponModel = preload("res://scripts/player/weapon_model.gd")
+const CharacterModel  = preload("res://scripts/player/character_model.gd")
+const WeaponModel     = preload("res://scripts/player/weapon_model.gd")
+const PlayerAnimator  = preload("res://scripts/player/player_animator.gd")
 
 # ── Stats (overridden per hero) ────────────────────────────────────────────────
 @export var walk_speed     := 5.0
@@ -39,6 +40,9 @@ var _cam_pitch := deg_to_rad(-20.0)
 var _cam_yaw   := 0.0
 var _is_local  := false
 
+var _animator: Node = null
+var _punch_cooldown := 0.0
+
 # ── Death camera ───────────────────────────────────────────────────────────────
 var _death_cam_target: Node3D = null
 var _death_timer := 0.0
@@ -66,6 +70,9 @@ func _ready() -> void:
 	spring_arm.add_excluded_object(get_rid())
 	spring_arm.collision_mask = 0
 	CharacterModel.build(mesh_root, hero_id)
+	_animator = PlayerAnimator.new()
+	add_child(_animator)
+	_animator.setup(mesh_root)
 	if _is_local:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		camera.current = true
@@ -109,7 +116,10 @@ func _apply_hero_stats() -> void:
 
 func set_hero(hid: String) -> void:
 	hero_id = hid
+	CharacterModel.build(mesh_root, hero_id)
 	_load_hero_component()
+	if _animator:
+		_animator.setup(mesh_root)
 
 # ── Input ──────────────────────────────────────────────────────────────────────
 
@@ -155,9 +165,13 @@ func _physics_process(delta: float) -> void:
 		global_position = current_vehicle.global_position + Vector3(0, 1.2, 0)
 		_sync_position()
 		return
+	if _punch_cooldown > 0.0:
+		_punch_cooldown -= delta
 	_apply_gravity(delta)
 	_apply_movement(delta)
 	move_and_slide()
+	if _animator:
+		_animator.set_speed(Vector2(velocity.x, velocity.z).length())
 	_sync_position()
 
 func _apply_gravity(delta: float) -> void:
@@ -313,7 +327,27 @@ func _try_attack() -> void:
 	_fire_weapon(slot["id"])
 
 func _punch() -> void:
+	if _punch_cooldown > 0.0:
+		return
+	_punch_cooldown = 0.5
+
+	if _animator:
+		_animator.play_punch()
+
 	WantedSystem.report_crime("punch_civilian")
+
+	# Hit nearest NPC within arm's reach (2 m)
+	var best: Node3D = null
+	var best_dist := 2.0
+	for npc in get_tree().get_nodes_in_group("npcs"):
+		if not is_instance_valid(npc):
+			continue
+		var d := global_position.distance_to(npc.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = npc
+	if best != null and best.has_method("take_damage"):
+		best.take_damage(25.0, peer_id)
 
 func _fire_weapon(weapon_id: String) -> void:
 	var from := camera.global_position
