@@ -42,6 +42,7 @@ func generate(world_seed: int, map_size: String) -> void:
 	_build_roads()
 	_build_blocks()
 	_place_spawn_points()
+	_place_lampposts()
 	world_ready.emit()
 
 # ── Tile logic ─────────────────────────────────────────────────────────────────
@@ -99,6 +100,27 @@ func _build_roads() -> void:
 			Vector3(x * CELL_STRIDE, 0.01, total * 0.5 - ROAD_WIDTH * 0.5),
 			_mat_road)
 		add_child(strip)
+	# Centerline dashes
+	var white_mat := _solid_mat(Color(0.92, 0.92, 0.88))
+	var dash_count: int = int(total / 6.0)
+	# Horizontal road centerlines
+	for z in _grid_n + 1:
+		var road_z: float = z * CELL_STRIDE
+		for d in dash_count:
+			if d % 2 == 0:
+				continue
+			var dx: float = d * 6.0 + 1.0
+			var dash := _make_flat_box(Vector3(3.5, 0.03, 0.18), Vector3(dx, 0.03, road_z), white_mat)
+			add_child(dash)
+	# Vertical road centerlines
+	for x in _grid_n + 1:
+		var road_x: float = x * CELL_STRIDE
+		for d in dash_count:
+			if d % 2 == 0:
+				continue
+			var dz: float = d * 6.0 + 1.0
+			var dash := _make_flat_box(Vector3(0.18, 0.03, 3.5), Vector3(road_x, 0.03, dz), white_mat)
+			add_child(dash)
 
 # ── Blocks ─────────────────────────────────────────────────────────────────────
 
@@ -159,6 +181,28 @@ func _build_park(origin: Vector3) -> void:
 		var tz := _rng.randf_range(2.0, BLOCK_SIZE - 2.0)
 		var trunk := _make_cylinder(0.4, 3.0, origin + Vector3(tx, 1.5, tz), _mat_industrial)
 		add_child(trunk)
+	# Central path
+	var path_mat := _solid_mat(Color(0.62, 0.58, 0.52))
+	var path := _make_flat_box(
+		Vector3(2.0, 0.06, BLOCK_SIZE),
+		origin + Vector3(BLOCK_SIZE * 0.5, 0.03, BLOCK_SIZE * 0.5),
+		path_mat)
+	add_child(path)
+	# Benches
+	var bench_mat := _solid_mat(Color(0.4, 0.28, 0.15))
+	for _i in 3:
+		var bx: float = _rng.randf_range(3.0, BLOCK_SIZE - 3.0)
+		var bz: float = _rng.randf_range(3.0, BLOCK_SIZE - 3.0)
+		var seat := _make_flat_box(
+			Vector3(1.4, 0.08, 0.45),
+			origin + Vector3(bx, 0.45, bz),
+			bench_mat)
+		add_child(seat)
+		var back := _make_flat_box(
+			Vector3(1.4, 0.5, 0.08),
+			origin + Vector3(bx, 0.7, bz - 0.2),
+			bench_mat)
+		add_child(back)
 
 # ── Spawn points ───────────────────────────────────────────────────────────────
 
@@ -170,6 +214,22 @@ func _place_spawn_points() -> void:
 				continue
 			var pos := Vector3(x * CELL_STRIDE + ROAD_WIDTH * 0.5, 1.0, z * CELL_STRIDE + ROAD_WIDTH * 0.5)
 			GameManager.register_spawn_point(pos)
+
+# ── Lampposts ──────────────────────────────────────────────────────────────────
+
+func _place_lampposts() -> void:
+	var pole_mat  := _solid_mat(Color(0.3, 0.3, 0.3))
+	var light_mat := _solid_mat(Color(1.0, 0.95, 0.7))
+	for x in _grid_n + 1:
+		for z in _grid_n + 1:
+			var pos := Vector3(
+				x * CELL_STRIDE + ROAD_WIDTH * 0.5 - 1.5,
+				0.0,
+				z * CELL_STRIDE + ROAD_WIDTH * 0.5 - 1.5)
+			var pole := _make_cylinder(0.08, 5.0, pos + Vector3(0.0, 2.5, 0.0), pole_mat)
+			add_child(pole)
+			var lamp := _make_flat_box(Vector3(0.4, 0.15, 0.4), pos + Vector3(0.0, 5.1, 0.0), light_mat)
+			add_child(lamp)
 
 # ── Mesh helpers ───────────────────────────────────────────────────────────────
 
@@ -189,6 +249,23 @@ func _make_building(size: Vector3, origin: Vector3, mat: StandardMaterial3D) -> 
 	body.add_child(mi)
 	body.add_child(cs)
 	body.position = origin
+	# Window bands: one horizontal strip per floor on front/back faces
+	var win_mat := _solid_mat(Color(0.4, 0.55, 0.72))
+	var floors: int = max(1, int(size.y / 3.5))
+	for fl in floors:
+		var wy: float = fl * 3.5 + 1.5
+		if wy >= size.y:
+			break
+		var band := _make_flat_box(
+			Vector3(size.x * 0.85, 0.8, 0.1),
+			Vector3(size.x * 0.5, wy, size.z + 0.05),
+			win_mat)
+		body.add_child(band)
+		var band2 := _make_flat_box(
+			Vector3(size.x * 0.85, 0.8, 0.1),
+			Vector3(size.x * 0.5, wy, -0.05),
+			win_mat)
+		body.add_child(band2)
 	return body
 
 func _make_flat_box(size: Vector3, center: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
@@ -214,16 +291,16 @@ func _make_cylinder(radius: float, height: float, center: Vector3, mat: Standard
 # ── Materials ──────────────────────────────────────────────────────────────────
 
 func _build_materials() -> void:
-	_mat_road        = _solid_mat(Color(0.18, 0.18, 0.18))
-	_mat_sidewalk    = _solid_mat(Color(0.55, 0.53, 0.50))
-	_mat_grass       = _solid_mat(Color(0.25, 0.52, 0.20))
-	_mat_residential = _solid_mat(Color(0.72, 0.65, 0.55))
-	_mat_commercial  = _solid_mat(Color(0.55, 0.65, 0.78))
-	_mat_industrial  = _solid_mat(Color(0.50, 0.48, 0.45))
+	_mat_road        = _solid_mat(Color(0.14, 0.14, 0.14), 0.0, 0.95)
+	_mat_sidewalk    = _solid_mat(Color(0.60, 0.57, 0.53), 0.0, 0.90)
+	_mat_grass       = _solid_mat(Color(0.22, 0.50, 0.18), 0.0, 1.0)
+	_mat_residential = _solid_mat(Color(0.75, 0.67, 0.55), 0.0, 0.85)
+	_mat_commercial  = _solid_mat(Color(0.50, 0.62, 0.76), 0.1, 0.6)
+	_mat_industrial  = _solid_mat(Color(0.48, 0.46, 0.42), 0.2, 0.7)
 
-func _solid_mat(color: Color) -> StandardMaterial3D:
+func _solid_mat(color: Color, metallic: float = 0.0, roughness: float = 0.85) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = color
-	m.roughness    = 0.85
-	m.metallic     = 0.0
+	m.roughness    = roughness
+	m.metallic     = metallic
 	return m

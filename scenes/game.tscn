@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/game_bootstrap.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/world_generator.gd" id="2"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scripts/ui/cheat_menu.gd" id="10"]
 [ext_resource type="Script" path="res://scripts/world/weather_system.gd" id="WX"]
 [ext_resource type="Script" path="res://scripts/world/time_of_day.gd" id="TOD"]
+[ext_resource type="Script" path="res://scripts/world/rain_system.gd" id="RS"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 cell_size = 0.25
@@ -402,3 +403,6 @@ script = ExtResource("WX")
 
 [node name="TimeOfDay" type="Node" parent="."]
 script = ExtResource("TOD")
+
+[node name="RainSystem" type="Node3D" parent="."]
+script = ExtResource("RS")

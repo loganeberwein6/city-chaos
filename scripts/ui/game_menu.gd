@@ -87,7 +87,21 @@ func _populate_weather() -> void:
 		GameManager.set_rule("weather", w)
 		var ws: Node = get_tree().root.find_child("WeatherSystem", true, false)
 		if ws and ws.has_method("_apply_weather"):
-			ws._apply_weather(w))
+			ws._apply_weather(w)
+		var rain: Node = get_tree().get_first_node_in_group("rain_system")
+		if rain and rain.has_method("set_rain"):
+			rain.set_rain(w == "rain" or w == "storm"))
+	# Add a Rain Toggle CheckButton below the weather option
+	var rain_label := Label.new()
+	rain_label.text = "Rain Toggle"
+	rules_tab.add_child(rain_label)
+	var rain_toggle := CheckButton.new()
+	rain_toggle.text = "Rain On/Off"
+	rain_toggle.toggled.connect(func(checked: bool) -> void:
+		var rain: Node = get_tree().get_first_node_in_group("rain_system")
+		if rain and rain.has_method("set_rain"):
+			rain.set_rain(checked))
+	rules_tab.add_child(rain_toggle)
 
 func _refresh_player_list() -> void:
 	player_list.clear()
