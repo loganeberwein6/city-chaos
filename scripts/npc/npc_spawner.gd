@@ -82,9 +82,9 @@ func _spawn_at(pos: Vector3) -> void:
 	var type := _pick_type()
 	if not _scenes.has(type): return
 	var npc: Node3D = _scenes[type].instantiate()
-	npc.global_position = pos
 	npc.add_to_group("npcs")
 	get_tree().root.add_child(npc)
+	npc.global_position = pos
 	_active_npcs.append(npc)
 
 func _pick_type() -> String:

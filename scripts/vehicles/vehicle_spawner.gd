@@ -86,13 +86,12 @@ func _spawn_at(pos: Vector3) -> void:
 		return
 	var type: String = keys[randi() % keys.size()]
 	var v: Node3D = _scenes[type].instantiate()
-	v.global_position = pos
 	get_tree().root.add_child(v)
+	v.global_position = pos
 	_active.append(v)
 
 func _spawn_placeholder(pos: Vector3) -> void:
 	var body := RigidBody3D.new()
-	body.global_position = pos
 	var col := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(2.2, 1.4, 4.5)
@@ -104,6 +103,7 @@ func _spawn_placeholder(pos: Vector3) -> void:
 	mesh.mesh = bm
 	body.add_child(mesh)
 	get_tree().root.add_child(body)
+	body.global_position = pos
 
 func _get_player_positions() -> Array[Vector3]:
 	var out: Array[Vector3] = []

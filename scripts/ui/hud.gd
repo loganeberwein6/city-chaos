@@ -80,6 +80,7 @@ func _build_hotbar() -> void:
 		var panel := PanelContainer.new()
 		panel.custom_minimum_size = Vector2(52, 52)
 		var vbox := VBoxContainer.new()
+		vbox.name = "VBoxContainer"
 		var name_lbl := Label.new()
 		name_lbl.name = "WeaponName"
 		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
