@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/game_bootstrap.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/world_generator.gd" id="2"]
@@ -10,6 +10,8 @@
 [ext_resource type="Script" path="res://scripts/world/police_response.gd" id="8"]
 [ext_resource type="Script" path="res://scripts/ui/minimap.gd" id="9"]
 [ext_resource type="Script" path="res://scripts/ui/cheat_menu.gd" id="10"]
+[ext_resource type="Script" path="res://scripts/world/weather_system.gd" id="WX"]
+[ext_resource type="Script" path="res://scripts/world/time_of_day.gd" id="TOD"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.18, 0.45, 0.78, 1)
@@ -382,3 +384,9 @@ offset_right = 100.0
 offset_bottom = -35.0
 grow_horizontal = 2
 text = "Quit to Desktop"
+
+[node name="WeatherSystem" type="Node" parent="."]
+script = ExtResource("WX")
+
+[node name="TimeOfDay" type="Node" parent="."]
+script = ExtResource("TOD")

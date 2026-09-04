@@ -49,7 +49,8 @@ func _tick_decay(delta: float) -> void:
 	if police_in_sight:
 		return
 	var rate := DECAY_RATE_BUILDING if in_building else DECAY_RATE_NORMAL
-	heat = maxf(0.0, heat - rate * delta)
+	var speed_mult: float = GameManager.rules.get("star_speed", 1.0)
+	heat = maxf(0.0, heat - rate * speed_mult * delta)
 
 func _tick_star_display(delta: float) -> void:
 	_star_lag_timer += delta
@@ -88,7 +89,8 @@ func _apply_crime(crime_type: String) -> void:
 	var value: float = CRIME_VALUES.get(crime_type, 0.0)
 	if news_watching:
 		value *= NEWS_MULTIPLIER
-	heat = minf(10000.0, heat + value)
+	var speed_mult: float = GameManager.rules.get("star_speed", 1.0)
+	heat = minf(10000.0, heat + value * speed_mult)
 	heat_changed.emit(heat)
 
 func reset_heat() -> void:

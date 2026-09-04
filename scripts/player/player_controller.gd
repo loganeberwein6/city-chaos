@@ -204,6 +204,11 @@ func take_damage(amount: float, attacker_id: int) -> void:
 	if not _is_local:
 		return
 
+	# Friendly fire check: block player-on-player damage when friendly fire is off
+	if attacker_id != peer_id and attacker_id in GameManager._players:
+		if not GameManager.rules.get("friendly_fire", false):
+			return
+
 	# Armor absorbs 60% of damage
 	if armor > 0.0:
 		var absorbed := minf(amount * 0.6, armor)
@@ -217,6 +222,17 @@ func take_damage(amount: float, attacker_id: int) -> void:
 
 func heal(amount: float) -> void:
 	health = minf(health + amount, max_health)
+
+@rpc("authority", "reliable", "call_local")
+func arrested() -> void:
+	if not _is_local:
+		return
+	# Stun: disable input for 3 seconds, show message
+	is_immune = true
+	await get_tree().create_timer(3.0).timeout
+	respawn(GameManager.get_spawn_point())
+	WantedSystem.reset_heat()
+	is_immune = false
 
 func give_armor(amount: float) -> void:
 	armor = minf(armor + amount, max_armor)

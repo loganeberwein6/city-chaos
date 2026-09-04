@@ -49,6 +49,11 @@ func _ready() -> void:
 		star_speed.value_changed.connect(func(v): GameManager.set_rule("star_speed", v))
 		gravity_mult.value_changed.connect(func(v): GameManager.set_rule("gravity_mult", v))
 		friendly_fire.toggled.connect(func(v): GameManager.set_rule("friendly_fire", v))
+		time_slider.value_changed.connect(func(v: float) -> void:
+			GameManager.set_rule("time_of_day", v)
+			var tod: Node = get_tree().root.find_child("TimeOfDay", true, false)
+			if tod and tod.has_method("_apply_time"):
+				tod._apply_time(v))
 		_populate_weather()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -77,8 +82,12 @@ func _populate_weather() -> void:
 	weather_opt.add_item("Rain")
 	weather_opt.add_item("Fog")
 	weather_opt.add_item("Storm")
-	weather_opt.item_selected.connect(func(idx):
-		GameManager.set_rule("weather", ["clear","rain","fog","storm"][idx]))
+	weather_opt.item_selected.connect(func(idx: int) -> void:
+		var w: String = ["clear","rain","fog","storm"][idx]
+		GameManager.set_rule("weather", w)
+		var ws: Node = get_tree().root.find_child("WeatherSystem", true, false)
+		if ws and ws.has_method("_apply_weather"):
+			ws._apply_weather(w))
 
 func _refresh_player_list() -> void:
 	player_list.clear()

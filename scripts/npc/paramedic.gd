@@ -54,6 +54,16 @@ func _find_heal_target() -> void:
 			_heal_target = nb
 			enter_chase(nb)
 			return
+	# Also check players
+	for player in get_tree().get_nodes_in_group("players"):
+		var pb: Node3D = player as Node3D
+		if pb == null: continue
+		var ph: float = pb.get("health")
+		var pmh: float = pb.get("max_health")
+		if ph < pmh * 0.5 and global_position.distance_to(pb.global_position) < 6.0:
+			if pb.has_method("heal"):
+				pb.heal(10.0)
+			return
 	_heal_target = null
 
 func _tick_chase(delta: float) -> void:

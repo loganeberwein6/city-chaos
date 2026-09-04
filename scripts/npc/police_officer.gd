@@ -68,8 +68,13 @@ func _tick_attack(delta: float) -> void:
 		_shoot_at(target)
 
 func _attempt_arrest() -> void:
-	# Flash arrest — just reset player stars for now; full mechanic later
-	WantedSystem.reset_heat()
+	if target == null or not is_instance_valid(target):
+		return
+	var dist := global_position.distance_to(target.global_position)
+	if dist > 2.0:
+		return
+	if target.has_method("arrested"):
+		target.rpc("arrested")
 
 func _shoot_at(tgt: Node3D) -> void:
 	if tgt.has_method("take_damage"):
