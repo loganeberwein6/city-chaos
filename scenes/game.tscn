@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/game_bootstrap.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/world_generator.gd" id="2"]
@@ -55,6 +55,33 @@ script = ExtResource("7")
 
 [node name="PoliceResponse" type="Node" parent="."]
 script = ExtResource("8")
+
+[node name="LoadingOverlay" type="CanvasLayer" parent="."]
+layer = 100
+
+[node name="Bg" type="ColorRect" parent="LoadingOverlay"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.06, 0.09, 1)
+
+[node name="Label" type="Label" parent="LoadingOverlay"]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -40.0
+offset_right = 200.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Generating city..."
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 28
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("3")
