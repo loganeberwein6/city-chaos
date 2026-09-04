@@ -58,6 +58,7 @@ func _ready() -> void:
 	_is_local = (peer_id == multiplayer.get_unique_id())
 	spring_arm.spring_length = camera_distance
 	spring_arm.rotation.x = _cam_pitch
+	spring_arm.add_excluded_object(get_rid())
 	if _is_local:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		camera.current = true
