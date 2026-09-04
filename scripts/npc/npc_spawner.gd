@@ -1,8 +1,6 @@
 extends Node
 class_name NpcSpawner
 
-const _NpcBase = preload("res://scripts/npc/npc_base.gd")
-
 const SPAWN_RADIUS        := 80.0
 const DESPAWN_RADIUS      := 120.0
 const MAX_NPCS_PER_PLAYER := 20
@@ -26,13 +24,16 @@ func _ready() -> void:
 		_preload_scenes()
 
 func _preload_scenes() -> void:
-	_scenes = {
-		"civilian":  preload("res://scenes/npc/civilian.tscn"),
-		"gangster":  preload("res://scenes/npc/gangster.tscn"),
-		"rich":      preload("res://scenes/npc/rich_person.tscn"),
-		"paramedic": preload("res://scenes/npc/paramedic.tscn"),
-		"news":      preload("res://scenes/npc/news_crew.tscn"),
+	var paths := {
+		"civilian":  "res://scenes/npc/civilian.tscn",
+		"gangster":  "res://scenes/npc/gangster.tscn",
+		"rich":      "res://scenes/npc/rich_person.tscn",
+		"paramedic": "res://scenes/npc/paramedic.tscn",
+		"news":      "res://scenes/npc/news_crew.tscn",
 	}
+	for key in paths:
+		if ResourceLoader.exists(paths[key]):
+			_scenes[key] = load(paths[key])
 
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
@@ -51,7 +52,7 @@ func _physics_process(delta: float) -> void:
 func _cleanup_dead() -> void:
 	var keep: Array = []
 	for n in _active_npcs:
-		if is_instance_valid(n) and n.get("state") != _NpcBase.State.DEAD:
+		if is_instance_valid(n):
 			keep.append(n)
 	_active_npcs = keep
 	var stale: Array = []
