@@ -1,0 +1,215 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1"]
+
+[node name="MainMenu" type="Control"]
+script = ExtResource("1")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.10, 0.14, 1)
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 80.0
+offset_right = 200.0
+offset_bottom = 140.0
+grow_horizontal = 2
+text = "CITY CHAOS"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 52
+mouse_filter = 2
+
+[node name="MainPanel" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -110.0
+offset_right = 120.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 14
+
+[node name="BtnHost" type="Button" parent="MainPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(240, 48)
+text = "Host Game"
+
+[node name="BtnJoin" type="Button" parent="MainPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(240, 48)
+text = "Join Game"
+
+[node name="BtnOptions" type="Button" parent="MainPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(240, 48)
+text = "Options"
+
+[node name="BtnQuit" type="Button" parent="MainPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(240, 48)
+text = "Quit"
+
+[node name="JoinPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -220.0
+offset_right = 280.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="JoinPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="JoinPanel/VBox"]
+layout_mode = 2
+text = "Join Game"
+theme_override_font_sizes/font_size = 22
+
+[node name="ServerList" type="ItemList" parent="JoinPanel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 160)
+
+[node name="HBox" type="HBoxContainer" parent="JoinPanel/VBox"]
+layout_mode = 2
+
+[node name="IPInput" type="LineEdit" parent="JoinPanel/VBox/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "IP Address"
+
+[node name="PortInput" type="LineEdit" parent="JoinPanel/VBox/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 0)
+text = "7777"
+
+[node name="BtnConnect" type="Button" parent="JoinPanel/VBox"]
+layout_mode = 2
+text = "Connect"
+
+[node name="BtnCancel" type="Button" parent="JoinPanel/VBox"]
+layout_mode = 2
+text = "Back"
+
+[node name="LobbyPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -260.0
+offset_right = 240.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="LobbyPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="LobbyPanel/VBox"]
+layout_mode = 2
+text = "Host Game"
+theme_override_font_sizes/font_size = 22
+
+[node name="NameInput" type="LineEdit" parent="LobbyPanel/VBox"]
+layout_mode = 2
+placeholder_text = "Your name"
+
+[node name="MapSizeLabel" type="Label" parent="LobbyPanel/VBox"]
+layout_mode = 2
+text = "Map Size"
+
+[node name="MapSize" type="OptionButton" parent="LobbyPanel/VBox"]
+layout_mode = 2
+
+[node name="CheatsCheck" type="CheckBox" parent="LobbyPanel/VBox"]
+layout_mode = 2
+text = "Enable Cheats"
+
+[node name="CheatsModeLabel" type="Label" parent="LobbyPanel/VBox"]
+layout_mode = 2
+text = "Cheats Access"
+
+[node name="CheatsModeOpt" type="OptionButton" parent="LobbyPanel/VBox"]
+layout_mode = 2
+
+[node name="SeedLabel" type="Label" parent="LobbyPanel/VBox"]
+layout_mode = 2
+text = "World Seed (blank = random)"
+
+[node name="SeedInput" type="LineEdit" parent="LobbyPanel/VBox"]
+layout_mode = 2
+placeholder_text = "optional seed"
+
+[node name="BtnStart" type="Button" parent="LobbyPanel/VBox"]
+layout_mode = 2
+text = "Start Game"
+
+[node name="BtnCancel" type="Button" parent="LobbyPanel/VBox"]
+layout_mode = 2
+text = "Back"
+
+[node name="OptionsPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -150.0
+offset_right = 200.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="OptionsPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="OptionsPanel/VBox"]
+layout_mode = 2
+text = "Options (coming soon)"
+
+[node name="BtnBack" type="Button" parent="OptionsPanel/VBox"]
+layout_mode = 2
+text = "Back"
+
+[connection signal="pressed" from="MainPanel/BtnHost" to="." method="_on_host_pressed"]
+[connection signal="pressed" from="MainPanel/BtnJoin" to="." method="_on_join_pressed"]
+[connection signal="pressed" from="MainPanel/BtnOptions" to="." method="_on_options_pressed"]
+[connection signal="pressed" from="MainPanel/BtnQuit" to="." method="_on_quit_pressed"]
+[connection signal="pressed" from="JoinPanel/VBox/BtnConnect" to="." method="_on_connect_pressed"]
+[connection signal="pressed" from="JoinPanel/VBox/BtnCancel" to="." method="_on_join_cancel_pressed"]
+[connection signal="pressed" from="LobbyPanel/VBox/BtnStart" to="." method="_on_start_pressed"]
+[connection signal="pressed" from="LobbyPanel/VBox/BtnCancel" to="." method="_on_lobby_cancel_pressed"]
+[connection signal="pressed" from="OptionsPanel/VBox/BtnBack" to="." method="_on_options_back_pressed"]

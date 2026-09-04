@@ -1,0 +1,21 @@
+# Godot engine binaries — large, OS-specific, re-downloadable
+Godot_v*.exe
+Godot_v*.zip
+
+# Godot build cache
+.godot/
+*.uid
+
+# Godot export templates
+export_presets.cfg
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor metadata (optional — remove these lines if you want editor layout to sync)
+*.tres.import
+*.png.import
+*.wav.import
+*.ogg.import
