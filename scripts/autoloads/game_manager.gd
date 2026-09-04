@@ -78,7 +78,7 @@ func on_player_died(victim_id: int, killer_id: int, dropped_weapon: String, deat
 	if not multiplayer.is_server():
 		return
 
-	var streak := _death_streaks.get(victim_id, {"count": 0, "timer": 0.0})
+	var streak: Dictionary = _death_streaks.get(victim_id, {"count": 0, "timer": 0.0})
 	streak["count"] += 1
 	streak["timer"] = DEATH_STREAK_WINDOW
 	_death_streaks[victim_id] = streak

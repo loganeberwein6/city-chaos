@@ -69,8 +69,8 @@ func _on_start_pressed() -> void:
 	if pname == "": pname = "Player"
 	var sizes  := ["small", "medium", "large"]
 	var modes  := ["host", "op_list", "all", "off"]
-	var map_size    := sizes[($LobbyPanel/VBox/MapSize as OptionButton).selected]
-	var cheats_mode := modes[($LobbyPanel/VBox/CheatsModeOpt as OptionButton).selected]
+	var map_size: String    = sizes[($LobbyPanel/VBox/MapSize as OptionButton).selected]
+	var cheats_mode: String = modes[($LobbyPanel/VBox/CheatsModeOpt as OptionButton).selected]
 	var raw_seed    := ($LobbyPanel/VBox/SeedInput as LineEdit).text.strip_edges()
 	var world_seed  := raw_seed.hash() if raw_seed != "" else randi()
 	GameManager.rules["map_size"]    = map_size

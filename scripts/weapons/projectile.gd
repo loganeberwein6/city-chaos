@@ -30,7 +30,7 @@ func _check_hit() -> void:
 	)
 	var result := get_world_3d().direct_space_state.intersect_ray(query)
 	if result.is_empty(): return
-	var col := result["collider"]
+	var col := result["collider"] as CollisionObject3D
 	if col.has_method("take_damage"):
 		col.take_damage(damage, owner_id)
 	queue_free()

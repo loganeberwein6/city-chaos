@@ -51,7 +51,7 @@ func _tick_attack(delta: float) -> void:
 func _shoot_at(tgt: Node3D) -> void:
 	if not tgt.has_method("take_damage"): return
 	var dmg_table := {"pistol":22.0,"smg":14.0,"assault_rifle":28.0,"shotgun":70.0,"rpg":120.0}
-	var dmg := dmg_table.get(weapon_id, 20.0)
+	var dmg: float = dmg_table.get(weapon_id, 20.0)
 	var query := PhysicsRayQueryParameters3D.create(global_position + Vector3(0,1,0), tgt.global_position + Vector3(0,1,0))
 	query.exclude = [self]
 	var result := get_world_3d().direct_space_state.intersect_ray(query)
