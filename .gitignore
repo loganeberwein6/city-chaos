@@ -9,6 +9,9 @@ Godot_v*.zip
 # Godot export templates
 export_presets.cfg
 
+# Launcher temp files
+.__update.zip
+
 # OS cruft
 .DS_Store
 Thumbs.db
