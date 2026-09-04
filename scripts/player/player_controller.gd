@@ -23,15 +23,15 @@ var weapon_slots: Array[Dictionary] = []  # [{id, ammo, reserve}, ...]
 
 # ── Camera ─────────────────────────────────────────────────────────────────────
 @export var camera_sensitivity := 0.003
-@export var camera_min_pitch   := -10.0
-@export var camera_max_pitch   := 75.0
+@export var camera_min_pitch   := -80.0
+@export var camera_max_pitch   := 15.0
 @export var camera_distance    := 6.0
 
 @onready var spring_arm: SpringArm3D  = $SpringArm3D
 @onready var camera:     Camera3D    = $SpringArm3D/Camera3D
 @onready var mesh_root:  Node3D      = $MeshRoot
 
-var _cam_pitch := deg_to_rad(20.0)
+var _cam_pitch := deg_to_rad(-20.0)
 var _is_local  := false
 
 # ── Death camera ───────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _rotate_camera(delta: Vector2) -> void:
 	rotate_y(-delta.x * camera_sensitivity)
-	_cam_pitch = clampf(_cam_pitch + delta.y * camera_sensitivity, deg_to_rad(camera_min_pitch), deg_to_rad(camera_max_pitch))
+	_cam_pitch = clampf(_cam_pitch - delta.y * camera_sensitivity, deg_to_rad(camera_min_pitch), deg_to_rad(camera_max_pitch))
 	spring_arm.rotation.x = _cam_pitch
 
 # ── Physics ────────────────────────────────────────────────────────────────────
