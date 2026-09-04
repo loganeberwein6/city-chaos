@@ -45,6 +45,7 @@ func host(name: String) -> bool:
 
 func _start_beacon() -> void:
 	_beacon_socket = PacketPeerUDP.new()
+	_beacon_socket.bind(0)
 	_beacon_socket.set_broadcast_enabled(true)
 
 func _stop_beacon() -> void:

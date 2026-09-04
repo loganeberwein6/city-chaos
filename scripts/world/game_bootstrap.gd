@@ -5,15 +5,18 @@ const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
 @onready var world_gen:    Node3D = $WorldGenerator
 @onready var players_root: Node3D = $PlayersRoot
 
-func _ready() -> void:
-	var seed_val: int    = GameManager.rules.get("world_seed", randi())
-	var map_size: String = GameManager.rules.get("map_size", "medium")
+var _seed_val: int    = 0
+var _map_size: String = "medium"
 
-	world_gen.call("generate", seed_val, map_size)
+func _ready() -> void:
+	_seed_val = GameManager.rules.get("world_seed", randi())
+	_map_size = GameManager.rules.get("map_size", "medium")
+
+	world_gen.call("generate", _seed_val, _map_size)
 	_spawn_local_player()
 
 	if multiplayer.is_server():
-		_rpc_sync_world.rpc(seed_val, map_size)
+		_rpc_sync_world.rpc(_seed_val, _map_size)
 
 	NetworkManager.player_joined.connect(_on_player_joined)
 	NetworkManager.player_left.connect(_on_player_left)
@@ -50,6 +53,7 @@ func _rpc_spawn_remote_player(peer_id: int, pos: Vector3, hero: String = "normal
 func _on_player_joined(peer_id: int, data: Dictionary) -> void:
 	if not multiplayer.is_server():
 		return
+	_rpc_sync_world.rpc_id(peer_id, _seed_val, _map_size)
 	var hero: String = data.get("hero", "normal_person")
 	if players_root.get_node_or_null(str(peer_id)) == null:
 		var player: Node3D = PLAYER_SCENE.instantiate() as Node3D
