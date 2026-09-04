@@ -8,6 +8,6 @@ class RunGame
     {
         string dir     = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         string updater = Path.Combine(dir, "Update Game.exe");
-        Process.Start(new ProcessStartInfo(updater) { WorkingDirectory = dir, UseShellExecute = true });
+        Process.Start(new ProcessStartInfo(updater, "--silent") { WorkingDirectory = dir, UseShellExecute = true });
     }
 }

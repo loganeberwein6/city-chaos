@@ -1,162 +1,190 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Reflection;
 using System.Threading;
+using System.Windows.Forms;
 
-class Updater
+// ── Shared game/update logic ──────────────────────────────────────────────────
+
+static class Game
 {
-    const string Owner      = "loganeberwein6";
-    const string Repo       = "city-chaos";
-    const string Branch     = "main";
-    const string VerFile    = "version.txt";
-    // Game is launched by finding the Godot engine exe directly — not via Run Game.exe
-    // (Run Game.exe is now just a shortcut that calls Update Game.exe)
+    const string Owner   = "loganeberwein6";
+    const string Repo    = "city-chaos";
+    const string Branch  = "main";
+    const string VerFile = "version.txt";
 
-    static string ZipUrl    => $"https://github.com/{Owner}/{Repo}/archive/refs/heads/{Branch}.zip";
-    static string RemoteVer => $"https://raw.githubusercontent.com/{Owner}/{Repo}/{Branch}/{VerFile}";
+    public static string Dir =>
+        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-    static string GameDir => Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+    static string ZipUrl =>
+        $"https://github.com/{Owner}/{Repo}/archive/refs/heads/{Branch}.zip";
 
-    // ── Version helpers ────────────────────────────────────────────────────────
+    static string RawVerUrl =>
+        $"https://raw.githubusercontent.com/{Owner}/{Repo}/{Branch}/{VerFile}";
 
-    static int ReadLocalVersion()
+    public static int ReadLocalVersion()
     {
-        string path = Path.Combine(GameDir, VerFile);
-        if (!File.Exists(path)) return 0;
-        return int.TryParse(File.ReadAllText(path).Trim(), out int v) ? v : 0;
+        string p = Path.Combine(Dir, VerFile);
+        return File.Exists(p) && int.TryParse(File.ReadAllText(p).Trim(), out int v) ? v : 0;
     }
 
-    static int FetchRemoteVersion()
+    public static int FetchRemoteVersion()
     {
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
         var wc = new WebClient();
         wc.Headers["User-Agent"] = "CityChaosupdater/2.0";
-        string text = wc.DownloadString(RemoteVer);
-        return int.TryParse(text.Trim(), out int v) ? v : 0;
+        return int.TryParse(wc.DownloadString(RawVerUrl).Trim(), out int v) ? v : 0;
     }
 
-    static void WriteLocalVersion(int v)
+    public static void WriteLocalVersion(int v) =>
+        File.WriteAllText(Path.Combine(Dir, VerFile), v.ToString());
+
+    public static void DownloadAndApply()
     {
-        File.WriteAllText(Path.Combine(GameDir, VerFile), v.ToString());
-    }
+        string tmp    = Path.Combine(Path.GetTempPath(), "city_chaos_update.zip");
+        string tmpDir = Path.Combine(Path.GetTempPath(), "city_chaos_update");
 
-    // ── Update ─────────────────────────────────────────────────────────────────
-
-    static void DownloadAndApply()
-    {
-        string tmpZip     = Path.Combine(Path.GetTempPath(), "city_chaos_update.zip");
-        string tmpExtract = Path.Combine(Path.GetTempPath(), "city_chaos_update");
-
-        Console.WriteLine("  Downloading...");
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
         var wc = new WebClient();
         wc.Headers["User-Agent"] = "CityChaosupdater/2.0";
-        wc.DownloadFile(ZipUrl, tmpZip);
+        wc.DownloadFile(ZipUrl, tmp);
 
-        Console.WriteLine("  Extracting...");
-        if (Directory.Exists(tmpExtract))
-            Directory.Delete(tmpExtract, true);
-        ZipFile.ExtractToDirectory(tmpZip, tmpExtract);
+        if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, true);
+        ZipFile.ExtractToDirectory(tmp, tmpDir);
 
-        string[] roots = Directory.GetDirectories(tmpExtract);
-        if (roots.Length == 0) throw new Exception("Empty ZIP.");
-        CopyDirectory(roots[0], GameDir);
+        string[] roots = Directory.GetDirectories(tmpDir);
+        if (roots.Length == 0) throw new Exception("Empty ZIP from GitHub.");
+        CopyDir(roots[0], Dir);
 
-        File.Delete(tmpZip);
-        Directory.Delete(tmpExtract, true);
+        try { File.Delete(tmp); }    catch { }
+        try { Directory.Delete(tmpDir, true); } catch { }
     }
 
-    static void CopyDirectory(string src, string dst)
+    static void CopyDir(string src, string dst)
     {
         Directory.CreateDirectory(dst);
         foreach (string file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
         {
             string name = Path.GetFileName(file);
             if (name.StartsWith("Godot_v") && name.EndsWith(".exe")) continue;
-            if (name == "Update Game.exe") continue; // can't overwrite running exe
+            if (name == "Update Game.exe") continue;
 
             string rel  = file.Substring(src.Length).TrimStart(Path.DirectorySeparatorChar, '/');
             string dest = Path.Combine(dst, rel);
             Directory.CreateDirectory(Path.GetDirectoryName(dest));
-            File.Copy(file, dest, true);
+            try { File.Copy(file, dest, true); } catch { }
         }
     }
 
-    // ── Launch ─────────────────────────────────────────────────────────────────
-
-    static void LaunchGame()
+    public static void Launch()
     {
-        string[] godotExes = Directory.GetFiles(GameDir, "Godot_v*.exe");
-        if (godotExes.Length == 0)
+        string[] exes = Directory.GetFiles(Dir, "Godot_v*.exe");
+        if (exes.Length == 0) return;
+        Array.Sort(exes);
+        Process.Start(new ProcessStartInfo(exes[exes.Length - 1], "--path .")
+            { WorkingDirectory = Dir, UseShellExecute = true });
+    }
+}
+
+// ── Entry point ───────────────────────────────────────────────────────────────
+
+class Program
+{
+    [STAThread]
+    static void Main(string[] args)
+    {
+        if (Array.IndexOf(args, "--silent") >= 0)
         {
-            Console.WriteLine("ERROR: No Godot_v*.exe found in game folder.");
-            Console.WriteLine("Press Enter to exit.");
-            Console.ReadLine();
+            // Called from Run Game.exe — update silently, no window
+            try
+            {
+                int local  = Game.ReadLocalVersion();
+                int remote = Game.FetchRemoteVersion();
+                if (remote > local) { Game.DownloadAndApply(); Game.WriteLocalVersion(remote); }
+            }
+            catch { }
+            Game.Launch();
             return;
         }
-        Array.Sort(godotExes); // pick highest version if multiple
-        var psi = new ProcessStartInfo(godotExes[godotExes.Length - 1], "--path .")
-            { WorkingDirectory = GameDir, UseShellExecute = true };
-        Process.Start(psi);
+
+        // Run directly — show progress window
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+        Application.Run(new LauncherForm());
+    }
+}
+
+// ── Progress window (shown only when Update Game.exe is double-clicked) ───────
+
+class LauncherForm : Form
+{
+    Label _lbl;
+
+    public LauncherForm()
+    {
+        Text            = "City Chaos";
+        ClientSize      = new Size(300, 90);
+        FormBorderStyle = FormBorderStyle.FixedSingle;
+        StartPosition   = FormStartPosition.CenterScreen;
+        MaximizeBox     = false;
+        MinimizeBox     = false;
+
+        _lbl = new Label
+        {
+            Text      = "Checking for updates...",
+            Dock      = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Font      = new Font("Segoe UI", 10f)
+        };
+        Controls.Add(_lbl);
+
+        var w = new BackgroundWorker();
+        w.DoWork             += DoWork;
+        w.RunWorkerCompleted += Done;
+        w.RunWorkerAsync();
     }
 
-    // ── Entry point ────────────────────────────────────────────────────────────
+    void Say(string s) =>
+        Invoke((Action)(() => _lbl.Text = s));
 
-    [STAThread]
-    static void Main()
+    void DoWork(object sender, DoWorkEventArgs e)
     {
-        Console.Title = "City Chaos Launcher";
-        Console.WriteLine("+--------------------------+");
-        Console.WriteLine("|   City Chaos Launcher    |");
-        Console.WriteLine("+--------------------------+");
-        Console.WriteLine();
-
-        int local = ReadLocalVersion();
-        Console.Write($"Local version : {local}\nRemote version: ");
-
-        int remote = 0;
-        bool online = false;
         try
         {
-            remote = FetchRemoteVersion();
-            online = true;
-            Console.WriteLine(remote);
+            int local  = Game.ReadLocalVersion();
+            int remote = Game.FetchRemoteVersion();
+            Say($"Local v{local}  ·  Remote v{remote}");
+            Thread.Sleep(500);
+
+            if (remote > local)
+            {
+                Say($"Downloading v{local} → v{remote}...");
+                Game.DownloadAndApply();
+                Game.WriteLocalVersion(remote);
+                Say("Done!");
+                Thread.Sleep(600);
+            }
+            else
+            {
+                Say("Up to date! Starting...");
+                Thread.Sleep(400);
+            }
         }
         catch
         {
-            Console.WriteLine("(offline)");
+            Say("Offline — starting game...");
+            Thread.Sleep(600);
         }
+    }
 
-        if (online && remote > local)
-        {
-            Console.WriteLine($"\nUpdate available! ({local} → {remote})");
-            try
-            {
-                DownloadAndApply();
-                WriteLocalVersion(remote);
-                Console.WriteLine("  Done! Relaunching...");
-                Thread.Sleep(400);
-                Process.Start(new ProcessStartInfo(
-                    Assembly.GetExecutingAssembly().Location)
-                    { WorkingDirectory = GameDir, UseShellExecute = true });
-                Environment.Exit(0);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  Update failed: {ex.Message}");
-                Console.WriteLine("  Launching current version...");
-            }
-        }
-        else
-        {
-            Console.WriteLine("\nAlready up to date.");
-        }
-
-        Console.WriteLine("\nStarting game...");
-        Thread.Sleep(300);
-        LaunchGame();
+    void Done(object sender, RunWorkerCompletedEventArgs e)
+    {
+        Game.Launch();
+        Application.Exit();
     }
 }
