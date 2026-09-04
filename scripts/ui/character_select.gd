@@ -35,7 +35,7 @@ func _build_ui() -> void:
 	title.add_theme_font_size_override("font_size", 28)
 	vbox.add_child(title)
 
-	var unlocked: Array = SaveData.get_unlocked_heroes()
+	var unlocked: Array = HERO_INFO.keys()
 
 	var grid := GridContainer.new()
 	grid.columns = 3
@@ -71,7 +71,7 @@ func _build_ui() -> void:
 		panel.add_child(inner)
 
 		if is_unlocked:
-			var hid := hero_id
+			var hid: String = hero_id
 			panel.gui_input.connect(func(e: InputEvent):
 				if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 					_select(hid)
