@@ -1,4 +1,4 @@
-extends NpcBase
+extends "res://scripts/npc/npc_base.gd"
 class_name NewsCrew
 
 var _filming := false

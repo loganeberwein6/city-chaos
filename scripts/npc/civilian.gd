@@ -1,4 +1,4 @@
-extends NpcBase
+extends "res://scripts/npc/npc_base.gd"
 class_name Civilian
 
 @export var fights_back := false

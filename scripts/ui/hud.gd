@@ -102,7 +102,7 @@ func _update_hotbar(player: Node) -> void:
 		var panel := _hotbar_slots[i]
 		var name_lbl: Label = panel.get_node("VBoxContainer/WeaponName")
 		var ammo_lbl: Label = panel.get_node("VBoxContainer/AmmoLabel")
-		var is_active := (i == player.active_weapon_slot)
+		var is_active: bool = (i == player.get("active_weapon_slot") as int)
 
 		var sc := panel.get_theme_stylebox("panel")
 		if is_active:

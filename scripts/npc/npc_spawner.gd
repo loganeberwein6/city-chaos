@@ -1,6 +1,8 @@
 extends Node
 class_name NpcSpawner
 
+const _NpcBase = preload("res://scripts/npc/npc_base.gd")
+
 const SPAWN_RADIUS     := 80.0
 const DESPAWN_RADIUS   := 120.0
 const MAX_NPCS_PER_PLAYER := 20
@@ -8,9 +10,8 @@ const SPAWN_INTERVAL   := 3.0
 const SPAWN_BATCH      := 3
 
 var _spawn_timer := 0.0
-var _active_npcs: Array[NpcBase] = []
+var _active_npcs: Array = []
 
-# Scene preloads
 var _scenes := {}
 
 func _ready() -> void:
@@ -37,46 +38,50 @@ func _physics_process(delta: float) -> void:
 		_spawn_batch()
 
 func _cleanup_dead() -> void:
-	_active_npcs = _active_npcs.filter(func(n): return is_instance_valid(n) and n.state != NpcBase.State.DEAD)
+	var keep: Array = []
+	for n in _active_npcs:
+		if is_instance_valid(n) and n.get("state") != _NpcBase.State.DEAD:
+			keep.append(n)
+	_active_npcs = keep
 
 func _despawn_far() -> void:
 	var players := _get_player_positions()
-	var to_remove: Array[NpcBase] = []
+	var keep: Array = []
 	for npc in _active_npcs:
-		if not is_instance_valid(npc): continue
+		if not is_instance_valid(npc):
+			continue
 		var near := false
 		for pp in players:
 			if npc.global_position.distance_to(pp) < DESPAWN_RADIUS:
-				near = true; break
-		if not near:
+				near = true
+				break
+		if near:
+			keep.append(npc)
+		else:
 			npc.queue_free()
-			to_remove.append(npc)
-	for r in to_remove:
-		_active_npcs.erase(r)
+	_active_npcs = keep
 
 func _spawn_batch() -> void:
 	var density: float = GameManager.rules.get("npc_density", 1.0)
 	if density <= 0.0: return
-	var max_total := int(MAX_NPCS_PER_PLAYER * GameManager._players.size() * density)
+	var max_total: int = int(MAX_NPCS_PER_PLAYER * GameManager._players.size() * density)
 	if _active_npcs.size() >= max_total: return
 
 	var players := _get_player_positions()
 	if players.is_empty(): return
 
-	var spawned := 0
 	for _i in range(SPAWN_BATCH):
 		if _active_npcs.size() >= max_total: break
-		var pp := players[randi() % players.size()]
+		var pp: Vector3 = players[randi() % players.size()]
 		var angle := randf() * TAU
 		var dist  := randf_range(30.0, SPAWN_RADIUS)
 		var pos   := pp + Vector3(cos(angle) * dist, 0, sin(angle) * dist)
 		_spawn_at(pos)
-		spawned += 1
 
 func _spawn_at(pos: Vector3) -> void:
 	var type := _pick_type()
 	if not _scenes.has(type): return
-	var npc: NpcBase = _scenes[type].instantiate()
+	var npc: Node3D = _scenes[type].instantiate()
 	npc.global_position = pos
 	npc.add_to_group("npcs")
 	get_tree().root.add_child(npc)

@@ -48,8 +48,8 @@ func generate(world_seed: int, map_size: String) -> void:
 
 func _pick_tile_type(x: int, z: int) -> TileType:
 	# Edges tend to be industrial, centre commercial, rest residential with parks
-	var cx := _grid_n / 2
-	var dist := (abs(x - cx) + abs(z - cx))
+	var cx: int = _grid_n / 2
+	var dist: int = absi(x - cx) + absi(z - cx)
 	var roll := _rng.randf()
 	if dist <= 1:
 		return TileType.COMMERCIAL if roll < 0.7 else TileType.PARK

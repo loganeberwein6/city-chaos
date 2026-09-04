@@ -1,4 +1,4 @@
-extends NpcBase
+extends "res://scripts/npc/npc_base.gd"
 class_name Paramedic
 
 var _heal_target: Node3D = null
@@ -43,11 +43,14 @@ func _tick_healing(_delta: float) -> void:
 		_find_heal_target()
 
 func _find_heal_target() -> void:
-	var space := get_world_3d().direct_space_state
 	for npc in get_tree().get_nodes_in_group("npcs"):
 		if npc == self: continue
-		var nb := npc as NpcBase
-		if nb and nb.state != State.DEAD and nb.health < nb.max_health * 0.5:
+		var nb: Node3D = npc as Node3D
+		if nb == null: continue
+		if nb.get("state") == State.DEAD: continue
+		var h: float  = nb.get("health")
+		var mh: float = nb.get("max_health")
+		if h < mh * 0.5:
 			_heal_target = nb
 			enter_chase(nb)
 			return
@@ -59,9 +62,10 @@ func _tick_chase(delta: float) -> void:
 	var dist := global_position.distance_to(_heal_target.global_position)
 	if dist <= HEAL_RANGE:
 		# Perform healing
-		if _heal_target.has_method("take_damage"):
-			_heal_target.health = minf(_heal_target.health + HEAL_RATE, _heal_target.max_health)
-		if _heal_target.health >= _heal_target.max_health:
+		var cur_h: float = _heal_target.get("health")
+		var max_h: float = _heal_target.get("max_health")
+		_heal_target.set("health", minf(cur_h + HEAL_RATE, max_h))
+		if _heal_target.get("health") >= max_h:
 			_heal_target = null
 			_enter_wander()
 	else:

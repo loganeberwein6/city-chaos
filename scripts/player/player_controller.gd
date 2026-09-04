@@ -31,7 +31,7 @@ var weapon_slots: Array[Dictionary] = []  # [{id, ammo, reserve}, ...]
 @onready var camera:     Camera3D    = $SpringArm3D/Camera3D
 @onready var mesh_root:  Node3D      = $MeshRoot
 
-var _cam_pitch := 0.0
+var _cam_pitch := deg_to_rad(20.0)
 var _is_local  := false
 
 # ── Death camera ───────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ var _death_cam_target: Node3D = null
 var _death_timer := 0.0
 
 # ── Vehicle ────────────────────────────────────────────────────────────────────
-var current_vehicle: VehicleBase = null
+var current_vehicle: Node3D = null
 
 # ── Hero component ─────────────────────────────────────────────────────────────
 var _hero_component: Node = null
@@ -57,6 +57,7 @@ func _ready() -> void:
 	peer_id = name.to_int() if name.is_valid_int() else 1
 	_is_local = (peer_id == multiplayer.get_unique_id())
 	spring_arm.spring_length = camera_distance
+	spring_arm.rotation.x = _cam_pitch
 	if _is_local:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		camera.current = true
@@ -157,7 +158,7 @@ func _apply_vehicle_input() -> void:
 	var throttle := Input.get_action_strength("move_forward") - Input.get_action_strength("move_back")
 	var steer    := Input.get_action_strength("move_left") - Input.get_action_strength("move_right")
 	var braking  := Input.is_action_pressed("brake")
-	current_vehicle.apply_input(throttle, steer, braking)
+	current_vehicle.call("apply_input", throttle, steer, braking)
 
 func _apply_movement(delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -306,9 +307,9 @@ func _reload_slot(slot_idx: int) -> void:
 	var slot := weapon_slots[slot_idx]
 	if slot["reserve"] <= 0:
 		return
-	var cap := _weapon_mag_size(slot["id"])
-	var needed := cap - slot["ammo"]
-	var take := mini(needed, slot["reserve"])
+	var cap: int = _weapon_mag_size(slot["id"])
+	var needed: int = cap - (slot["ammo"] as int)
+	var take: int = mini(needed, slot["reserve"] as int)
 	slot["ammo"] += take
 	slot["reserve"] -= take
 
@@ -345,8 +346,8 @@ func _spawn_dropped_weapon(weapon_id: String) -> void:
 	if not multiplayer.is_server(): return
 	var pickup_scene := load("res://scenes/weapons/weapon_pickup.tscn") as PackedScene
 	if not pickup_scene: return
-	var pickup: WeaponPickup = pickup_scene.instantiate()
-	pickup.weapon_id = weapon_id
+	var pickup: Node3D = pickup_scene.instantiate()
+	pickup.set("weapon_id", weapon_id)
 	pickup.global_position = global_position + Vector3(0, 0.5, 0)
 	get_tree().root.add_child(pickup)
 
@@ -354,13 +355,13 @@ func _spawn_dropped_weapon(weapon_id: String) -> void:
 
 func _try_vehicle_interact() -> void:
 	if current_vehicle:
-		current_vehicle.exit_vehicle()
+		current_vehicle.call("exit_vehicle")
 		current_vehicle = null
 		return
-	# Find nearest vehicle
 	for v in get_tree().get_nodes_in_group("vehicles"):
-		var vb := v as VehicleBase
-		if vb and vb.driver == null and global_position.distance_to(vb.global_position) < 4.0:
-			vb.enter_vehicle(self)
-			current_vehicle = vb
-			return
+		if not is_instance_valid(v): continue
+		if v.get("driver") != null: continue
+		if global_position.distance_to(v.global_position) >= 4.0: continue
+		v.call("enter_vehicle", self)
+		current_vehicle = v
+		return
