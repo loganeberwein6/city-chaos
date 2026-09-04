@@ -120,7 +120,7 @@ func _broadcast_sync() -> void:
 	var batch: Array = []
 	for npc in _active_npcs:
 		if is_instance_valid(npc) and _npc_ids.has(npc):
-			var p := npc.global_position
+			var p: Vector3 = npc.global_position
 			batch.append([_npc_ids[npc], p.x, p.y, p.z])
 	if not batch.is_empty():
 		_rpc_sync_npcs.rpc(batch)

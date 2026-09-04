@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const CharacterModel = preload("res://scripts/player/character_model.gd")
+
 # ── Stats (overridden per hero) ────────────────────────────────────────────────
 @export var walk_speed     := 5.0
 @export var sprint_speed   := 10.0

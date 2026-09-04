@@ -130,8 +130,8 @@ func _broadcast_vehicle_sync() -> void:
 	var batch: Array = []
 	for v in _active:
 		if is_instance_valid(v) and _vehicle_ids.has(v):
-			var p := v.global_position
-			var r := v.global_rotation
+			var p: Vector3 = v.global_position
+			var r: Vector3 = v.global_rotation
 			batch.append([_vehicle_ids[v], p.x, p.y, p.z, r.x, r.y, r.z])
 	if not batch.is_empty():
 		_rpc_sync_vehicles.rpc(batch)
