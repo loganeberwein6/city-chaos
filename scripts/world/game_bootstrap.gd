@@ -1,17 +1,17 @@
 extends Node3D
 
-const PLAYER_SCENE := preload("res://scenes/player.tscn")
+const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
 
-@onready var world_gen:    WorldGenerator = $WorldGenerator
-@onready var players_root: Node3D         = $PlayersRoot
-@onready var _loading:     CanvasLayer    = $LoadingOverlay
+@onready var world_gen:    Node3D      = $WorldGenerator
+@onready var players_root: Node3D      = $PlayersRoot
+@onready var _loading:     CanvasLayer = $LoadingOverlay
 
 func _ready() -> void:
 	var seed_val: int    = GameManager.rules.get("world_seed", randi())
 	var map_size: String = GameManager.rules.get("map_size", "medium")
 
-	# generate() is fully synchronous — spawn points are registered by the time it returns
-	world_gen.generate(seed_val, map_size)
+	# generate() is synchronous — spawn points are ready when it returns
+	world_gen.call("generate", seed_val, map_size)
 	_spawn_local_player()
 	_loading.visible = false
 
@@ -23,7 +23,7 @@ func _ready() -> void:
 
 @rpc("authority", "reliable", "call_remote")
 func _rpc_sync_world(seed_val: int, map_size: String) -> void:
-	world_gen.generate(seed_val, map_size)
+	world_gen.call("generate", seed_val, map_size)
 	_spawn_local_player()
 	_loading.visible = false
 
@@ -31,7 +31,7 @@ func _spawn_local_player() -> void:
 	var my_id: int = multiplayer.get_unique_id()
 	if players_root.get_node_or_null(str(my_id)) != null:
 		return
-	var player := PLAYER_SCENE.instantiate()
+	var player: Node3D = PLAYER_SCENE.instantiate() as Node3D
 	player.name     = str(my_id)
 	player.position = GameManager.get_spawn_point()
 	players_root.add_child(player, true)
@@ -42,7 +42,7 @@ func _spawn_local_player() -> void:
 func _rpc_spawn_remote_player(peer_id: int, pos: Vector3) -> void:
 	if players_root.get_node_or_null(str(peer_id)) != null:
 		return
-	var player := PLAYER_SCENE.instantiate()
+	var player: Node3D = PLAYER_SCENE.instantiate() as Node3D
 	player.name     = str(peer_id)
 	player.position = pos
 	players_root.add_child(player, true)
@@ -51,7 +51,7 @@ func _on_player_joined(peer_id: int, _data: Dictionary) -> void:
 	if not multiplayer.is_server():
 		return
 	if players_root.get_node_or_null(str(peer_id)) == null:
-		var player := PLAYER_SCENE.instantiate()
+		var player: Node3D = PLAYER_SCENE.instantiate() as Node3D
 		player.name     = str(peer_id)
 		player.position = GameManager.get_spawn_point()
 		players_root.add_child(player, true)
@@ -62,6 +62,6 @@ func _on_player_joined(peer_id: int, _data: Dictionary) -> void:
 			_rpc_spawn_remote_player.rpc_id(peer_id, eid, existing.position)
 
 func _on_player_left(peer_id: int) -> void:
-	var node := players_root.get_node_or_null(str(peer_id))
+	var node: Node = players_root.get_node_or_null(str(peer_id))
 	if node:
 		node.queue_free()
