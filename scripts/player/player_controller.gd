@@ -162,7 +162,7 @@ func _apply_vehicle_input() -> void:
 
 func _apply_movement(delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var move_dir := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	var move_dir := (transform.basis * Vector3(input_dir.x, 0, -input_dir.y)).normalized()
 	var target_speed := sprint_speed if Input.is_action_pressed("sprint") else walk_speed
 	var ctrl := 1.0 if is_on_floor() else air_control
 
