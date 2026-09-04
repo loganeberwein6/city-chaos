@@ -12,7 +12,8 @@ class Updater
     const string Repo       = "city-chaos";
     const string Branch     = "main";
     const string VerFile    = "version.txt";
-    const string GameExe    = "Run Game.exe";
+    // Game is launched by finding the Godot engine exe directly — not via Run Game.exe
+    // (Run Game.exe is now just a shortcut that calls Update Game.exe)
 
     static string ZipUrl    => $"https://github.com/{Owner}/{Repo}/archive/refs/heads/{Branch}.zip";
     static string RemoteVer => $"https://raw.githubusercontent.com/{Owner}/{Repo}/{Branch}/{VerFile}";
@@ -88,24 +89,18 @@ class Updater
 
     static void LaunchGame()
     {
-        string path = Path.Combine(GameDir, GameExe);
-        if (!File.Exists(path))
+        string[] godotExes = Directory.GetFiles(GameDir, "Godot_v*.exe");
+        if (godotExes.Length == 0)
         {
-            // Fallback: find any Godot exe and run it with --path .
-            string[] godotExes = Directory.GetFiles(GameDir, "Godot_v*.exe");
-            if (godotExes.Length > 0)
-            {
-                var psi = new ProcessStartInfo(godotExes[0], "--path .")
-                    { WorkingDirectory = GameDir, UseShellExecute = true };
-                Process.Start(psi);
-                return;
-            }
-            Console.WriteLine($"ERROR: Could not find {GameExe}.");
+            Console.WriteLine("ERROR: No Godot_v*.exe found in game folder.");
             Console.WriteLine("Press Enter to exit.");
             Console.ReadLine();
             return;
         }
-        Process.Start(new ProcessStartInfo(path) { WorkingDirectory = GameDir, UseShellExecute = true });
+        Array.Sort(godotExes); // pick highest version if multiple
+        var psi = new ProcessStartInfo(godotExes[godotExes.Length - 1], "--path .")
+            { WorkingDirectory = GameDir, UseShellExecute = true };
+        Process.Start(psi);
     }
 
     // ── Entry point ────────────────────────────────────────────────────────────
