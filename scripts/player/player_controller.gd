@@ -393,9 +393,18 @@ func _cycle_weapon(dir: int) -> void:
 func _select_weapon_slot(idx: int) -> void:
 	active_weapon_slot = idx
 	_equip_slot(idx)
+	_rpc_equip.rpc(idx)
 
-func _equip_slot(_idx: int) -> void:
-	pass  # Hook for 3D weapon model swap — implemented per hero
+func _equip_slot(idx: int) -> void:
+	var wid: String = weapon_slots[idx].get("id", "")
+	WeaponModel.build(weapon_mesh_root, wid)
+	weapon_mesh_root.visible = true
+
+@rpc("any_peer", "unreliable_ordered", "call_remote")
+func _rpc_equip(idx: int) -> void:
+	if _is_local: return
+	active_weapon_slot = idx
+	_equip_slot(idx)
 
 func _spawn_dropped_weapon(weapon_id: String) -> void:
 	if not multiplayer.is_server(): return
