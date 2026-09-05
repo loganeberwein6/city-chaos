@@ -253,15 +253,15 @@ func _apply_movement(delta: float) -> void:
 	var target_speed := sprint_speed if Input.is_action_pressed("sprint") else walk_speed
 	var ctrl := 1.0 if is_on_floor() else air_control
 
+	var input_rate := (acceleration + friction * 6.0) * delta if is_on_floor() else acceleration * ctrl * delta
 	if move_dir.length() > 0.01:
-		velocity.x = move_toward(velocity.x, move_dir.x * target_speed, acceleration * ctrl * delta)
-		velocity.z = move_toward(velocity.z, move_dir.z * target_speed, acceleration * ctrl * delta)
+		velocity.x = move_toward(velocity.x, move_dir.x * target_speed, input_rate)
+		velocity.z = move_toward(velocity.z, move_dir.z * target_speed, input_rate)
 		mesh_root.rotation.y = lerp_angle(mesh_root.rotation.y, atan2(move_dir.x, move_dir.z), 12.0 * delta)
 	else:
-		# Ground friction is much higher than air; air keeps its own slow drift
 		if is_on_floor():
-			velocity.x = move_toward(velocity.x, 0.0, friction * 4.0 * delta)
-			velocity.z = move_toward(velocity.z, 0.0, friction * 4.0 * delta)
+			velocity.x = move_toward(velocity.x, 0.0, friction * 14.0 * delta)
+			velocity.z = move_toward(velocity.z, 0.0, friction * 14.0 * delta)
 		else:
 			velocity.x = move_toward(velocity.x, 0.0, friction * air_control * delta)
 			velocity.z = move_toward(velocity.z, 0.0, friction * air_control * delta)

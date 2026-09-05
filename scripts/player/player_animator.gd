@@ -66,23 +66,38 @@ func _process(delta: float) -> void:
 		_jump_t += delta
 		var k := 0.22
 		if not _is_punching:
-			if _jump_t < 0.16:
-				# Jumpsquat: arms swing back behind the body (same width apart, x-only)
-				if _lua: _lua.rotation.x = lerpf(_lua.rotation.x,  0.82, 0.38)
-				if _rua: _rua.rotation.x = lerpf(_rua.rotation.x,  0.82, 0.38)
+			if _jump_t < 0.32:
+				# Jumpsquat: arms back, knees tuck — compact airborne shape before guard
+				if _lua:
+					_lua.rotation.x = lerpf(_lua.rotation.x,  0.82, 0.38)
+				if _rua:
+					_rua.rotation.x = lerpf(_rua.rotation.x,  0.82, 0.38)
 				if _lla: _lla.rotation.x = lerpf(_lla.rotation.x,  0.0,  0.38)
 				if _rla: _rla.rotation.x = lerpf(_rla.rotation.x,  0.0,  0.38)
+				if _lul: _lul.rotation.x = lerpf(_lul.rotation.x,  0.15, 0.28)
+				if _rul: _rul.rotation.x = lerpf(_rul.rotation.x,  0.15, 0.28)
+				if _lll: _lll.rotation.x = lerpf(_lll.rotation.x,  0.55, 0.28)
+				if _rll: _rll.rotation.x = lerpf(_rll.rotation.x,  0.55, 0.28)
 			else:
-				# Guard pose: elbows high, forearms angled in front of face
-				if _lua: _lua.rotation.x = lerpf(_lua.rotation.x, -2.40, k)
-				if _rua: _rua.rotation.x = lerpf(_rua.rotation.x, -2.40, k)
+				# Guard pose: elbows high and spread, forearms in front of face, legs extend
+				if _lua:
+					_lua.rotation.x = lerpf(_lua.rotation.x, -2.40, k)
+					_lua.rotation.z = lerpf(_lua.rotation.z, -0.45, k)
+				if _rua:
+					_rua.rotation.x = lerpf(_rua.rotation.x, -2.40, k)
+					_rua.rotation.z = lerpf(_rua.rotation.z,  0.45, k)
 				if _lla: _lla.rotation.x = lerpf(_lla.rotation.x,  0.72, k)
 				if _rla: _rla.rotation.x = lerpf(_rla.rotation.x,  0.72, k)
-		# Legs straight
-		if _lul: _lul.rotation.x = lerpf(_lul.rotation.x, 0.0, k)
-		if _rul: _rul.rotation.x = lerpf(_rul.rotation.x, 0.0, k)
-		if _lll: _lll.rotation.x = lerpf(_lll.rotation.x, 0.0, k)
-		if _rll: _rll.rotation.x = lerpf(_rll.rotation.x, 0.0, k)
+				if _lul: _lul.rotation.x = lerpf(_lul.rotation.x, 0.0, k)
+				if _rul: _rul.rotation.x = lerpf(_rul.rotation.x, 0.0, k)
+				if _lll: _lll.rotation.x = lerpf(_lll.rotation.x, 0.0, k)
+				if _rll: _rll.rotation.x = lerpf(_rll.rotation.x, 0.0, k)
+		else:
+			# Punching in air — legs extend straight
+			if _lul: _lul.rotation.x = lerpf(_lul.rotation.x, 0.0, k)
+			if _rul: _rul.rotation.x = lerpf(_rul.rotation.x, 0.0, k)
+			if _lll: _lll.rotation.x = lerpf(_lll.rotation.x, 0.0, k)
+			if _rll: _rll.rotation.x = lerpf(_rll.rotation.x, 0.0, k)
 		if _torso: _torso.position.y = 1.28 + sin(_anim_t * 0.4) * 0.006
 		return
 
@@ -104,8 +119,12 @@ func _process(delta: float) -> void:
 
 	# Arm/torso joints: punch tween owns these — don't overwrite during punch
 	if not _is_punching:
-		if _lua: _lua.rotation.x = -sin(t) * arm_amp
-		if _rua: _rua.rotation.x =  sin(t) * arm_amp
+		if _lua:
+			_lua.rotation.x = -sin(t) * arm_amp
+			_lua.rotation.z = lerpf(_lua.rotation.z, 0.0, 0.15)
+		if _rua:
+			_rua.rotation.x =  sin(t) * arm_amp
+			_rua.rotation.z = lerpf(_rua.rotation.z, 0.0, 0.15)
 		if _lla: _lla.rotation.x = maxf(sin(t), 0.0) * arm_amp * 0.30
 		if _rla: _rla.rotation.x = maxf(-sin(t), 0.0) * arm_amp * 0.30
 
