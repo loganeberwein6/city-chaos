@@ -59,7 +59,8 @@ func _npc_build_humanoid(root: Node3D,
 		pant_m: StandardMaterial3D, shoe_m: StandardMaterial3D) -> void:
 
 	# ── Head & neck ────────────────────────────────────────────────────────────
-	var head_mesh := SphereMesh.new(); head_mesh.radius = 0.115; head_mesh.height = 0.235
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.112; head_mesh.height = 0.272  # oval: slightly taller than wide
 	_npc_mi(root, head_mesh, skin_m, Vector3(0, 1.72, 0))
 	# Tapered neck — slightly wider at base
 	var neck_mesh := CylinderMesh.new()
@@ -313,6 +314,7 @@ func _drop_loot() -> void:
 # ── Walk animation ────────────────────────────────────────────────────────────
 
 func _update_walk_anim(delta: float) -> void:
+	if not is_on_floor(): return
 	var spd := Vector2(velocity.x, velocity.z).length()
 	_walk_t += delta * maxf(spd * 1.5, 0.0)
 	var mr := get_node_or_null("MeshRoot")

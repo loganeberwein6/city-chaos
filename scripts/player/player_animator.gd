@@ -17,6 +17,7 @@ var _torso: Node3D
 var _anim_t      := 0.0
 var _speed       := 0.0
 var _is_punching := false
+var _in_air      := false
 var locked       := false  # set true by player_controller during finisher
 
 func setup(mesh_root: Node3D) -> void:
@@ -41,6 +42,9 @@ func _refresh() -> void:
 func set_speed(speed: float) -> void:
 	_speed = speed
 
+func set_in_air(in_air: bool) -> void:
+	_in_air = in_air
+
 func _process(delta: float) -> void:
 	if not _mesh_root:
 		return
@@ -54,6 +58,22 @@ func _process(delta: float) -> void:
 	if locked:
 		return
 
+	# ── In-air: jump pose, no walk cycle ──────────────────────────────────────
+	if _in_air:
+		var k := 0.18  # lerp speed per frame
+		if not _is_punching:
+			if _lua: _lua.rotation.x = lerpf(_lua.rotation.x, -0.52, k)
+			if _rua: _rua.rotation.x = lerpf(_rua.rotation.x, -0.52, k)
+			if _lla: _lla.rotation.x = lerpf(_lla.rotation.x,  0.0,  k)
+			if _rla: _rla.rotation.x = lerpf(_rla.rotation.x,  0.0,  k)
+		if _lul: _lul.rotation.x = lerpf(_lul.rotation.x,  0.28, k)
+		if _rul: _rul.rotation.x = lerpf(_rul.rotation.x,  0.28, k)
+		if _lll: _lll.rotation.x = lerpf(_lll.rotation.x,  0.50, k)
+		if _rll: _rll.rotation.x = lerpf(_rll.rotation.x,  0.50, k)
+		if _torso: _torso.position.y = 1.28 + sin(_anim_t * 0.4) * 0.006
+		return
+
+	# ── On ground: walk cycle ─────────────────────────────────────────────────
 	var t   := _anim_t
 	var spd := _speed
 
@@ -62,7 +82,6 @@ func _process(delta: float) -> void:
 	var leg_amp := clampf(spd * 0.060, 0.03, 0.48)
 
 	# Hip joints swing the whole leg chain (upper + lower + foot follow automatically)
-	# rotation.x negative = leg swings forward (+Z) for model facing +Z
 	if _rul: _rul.rotation.x = -sin(t) * leg_amp
 	if _lul: _lul.rotation.x =  sin(t) * leg_amp
 
@@ -77,39 +96,39 @@ func _process(delta: float) -> void:
 		if _lla: _lla.rotation.x = maxf(sin(t), 0.0) * arm_amp * 0.30
 		if _rla: _rla.rotation.x = maxf(-sin(t), 0.0) * arm_amp * 0.30
 
-	# Torso idle breath (position only; rotation.z handled by punch tween)
+	# Torso idle breath
 	if _torso:
 		_torso.position.y = 1.28 + sin(t * 0.4) * 0.006
 
 func play_punch() -> void:
-	if _is_punching or not _rua:
+	if _is_punching or not _lua:
 		return
 	_is_punching = true
 
-	# Phase 1 (0.18 s): wind-up — elbow pulls back, fist coils near neck, torso twists right
+	# Phase 1 (0.18 s): wind-up — left elbow pulls back, fist near neck, torso twists left
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_rua,   "rotation:x",  0.55, 0.18)   # upper arm swings backward
-	tw.tween_property(_rua,   "rotation:z", -0.40, 0.18)   # arm swings inward toward neck
-	if _rla:   tw.tween_property(_rla,   "rotation:x", -1.70, 0.18)  # elbow bends sharply up
-	if _lua:   tw.tween_property(_lua,   "rotation:x",  0.18, 0.18)  # left arm counter-balances
-	if _torso: tw.tween_property(_torso, "rotation:y",  0.35, 0.18)  # torso ~20° right
+	tw.tween_property(_lua,    "rotation:x",  0.55, 0.18)  # left upper arm swings backward
+	tw.tween_property(_lua,    "rotation:z",  0.40, 0.18)  # arm swings inward toward neck (mirrored)
+	if _lla:   tw.tween_property(_lla,   "rotation:x", -1.70, 0.18)  # elbow bends sharply up
+	if _rua:   tw.tween_property(_rua,   "rotation:x",  0.18, 0.18)  # right arm counter-balances
+	if _torso: tw.tween_property(_torso, "rotation:y", -0.35, 0.18)  # torso twists left (mirrored)
 	await tw.finished
 
 	# Phase 2 (0.10 s): strike — arm extends and torso untwists simultaneously
 	var tw2 := create_tween().set_parallel(true)
-	tw2.tween_property(_rua,   "rotation:x", -1.30, 0.10)
-	tw2.tween_property(_rua,   "rotation:z",  0.0,  0.10)
-	if _rla:   tw2.tween_property(_rla,   "rotation:x",  0.15, 0.10)
-	if _lua:   tw2.tween_property(_lua,   "rotation:x",  0.35, 0.10)
-	if _torso: tw2.tween_property(_torso, "rotation:y", -0.12, 0.10)  # slight counter-follow
+	tw2.tween_property(_lua,   "rotation:x", -1.30, 0.10)
+	tw2.tween_property(_lua,   "rotation:z",  0.0,  0.10)
+	if _lla:   tw2.tween_property(_lla,   "rotation:x",  0.15, 0.10)
+	if _rua:   tw2.tween_property(_rua,   "rotation:x",  0.35, 0.10)
+	if _torso: tw2.tween_property(_torso, "rotation:y",  0.12, 0.10)  # slight counter-follow
 	await tw2.finished
 
 	# Phase 3 (0.22 s): return everything to rest
 	var tw3 := create_tween().set_parallel(true)
-	tw3.tween_property(_rua,   "rotation:x", 0.0, 0.22)
-	tw3.tween_property(_rua,   "rotation:z", 0.0, 0.22)
-	if _rla:   tw3.tween_property(_rla,   "rotation:x", 0.0, 0.22)
-	if _lua:   tw3.tween_property(_lua,   "rotation:x", 0.0, 0.22)
+	tw3.tween_property(_lua,   "rotation:x", 0.0, 0.22)
+	tw3.tween_property(_lua,   "rotation:z", 0.0, 0.22)
+	if _lla:   tw3.tween_property(_lla,   "rotation:x", 0.0, 0.22)
+	if _rua:   tw3.tween_property(_rua,   "rotation:x", 0.0, 0.22)
 	if _torso: tw3.tween_property(_torso, "rotation:y", 0.0, 0.22)
 	await tw3.finished
 

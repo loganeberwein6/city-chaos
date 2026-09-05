@@ -199,6 +199,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if _animator:
 		_animator.set_speed(Vector2(velocity.x, velocity.z).length())
+		_animator.set_in_air(not is_on_floor())
 	_sync_position()
 
 func _apply_gravity(delta: float) -> void:
@@ -226,8 +227,13 @@ func _apply_movement(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, move_dir.z * target_speed, acceleration * ctrl * delta)
 		mesh_root.rotation.y = lerp_angle(mesh_root.rotation.y, atan2(move_dir.x, move_dir.z), 12.0 * delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, friction * ctrl * delta)
-		velocity.z = move_toward(velocity.z, 0.0, friction * ctrl * delta)
+		# Ground friction is much higher than air; air keeps its own slow drift
+		if is_on_floor():
+			velocity.x = move_toward(velocity.x, 0.0, friction * 4.0 * delta)
+			velocity.z = move_toward(velocity.z, 0.0, friction * 4.0 * delta)
+		else:
+			velocity.x = move_toward(velocity.x, 0.0, friction * air_control * delta)
+			velocity.z = move_toward(velocity.z, 0.0, friction * air_control * delta)
 
 # ── Sync (basic position sync for multiplayer) ────────────────────────────────
 

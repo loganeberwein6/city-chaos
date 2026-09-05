@@ -57,7 +57,9 @@ static func _build_humanoid(
 	var s := scale
 
 	# ── Head & neck ─────────────────────────────────────────────────────────────
-	_mi(root, _sphere(0.115 * s), skin, Vector3(0, 1.72 * s, 0))
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.112 * s; head_mesh.height = 0.272 * s  # oval: taller than wide
+	_mi(root, head_mesh, skin, Vector3(0, 1.72 * s, 0))
 	_mi(root, _tcyl(0.040*s, 0.052*s, 0.090*s), skin,  Vector3(0, 1.615 * s, 0))  # tapered neck
 	_mi(root, _tcyl(0.055*s, 0.065*s, 0.052*s), shirt, Vector3(0, 1.558 * s, 0))  # collar ring
 
@@ -70,16 +72,16 @@ static func _build_humanoid(
 	_mi(torso_joint, _box(0.38*s, 0.27*s, 0.21*s), shirt, Vector3(0,  0.125*s, 0))  # chest
 	_mi(torso_joint, _box(0.30*s, 0.22*s, 0.18*s), shirt, Vector3(0, -0.125*s, 0))  # waist
 
-	# Belt
+	# Shoulder caps — children of Torso so they follow torso rotation during punch
+	_mi(torso_joint, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3(-0.245*s,  0.14*s, 0))
+	_mi(torso_joint, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3( 0.245*s,  0.14*s, 0))
+
+	# Belt (stays on root — doesn't rotate with torso, giving belt-slip look on punch)
 	var belt_mat := _mat(Color(0.14, 0.11, 0.08))
 	_mi(root, _box(0.36*s, 0.055*s, 0.21*s), belt_mat, Vector3(0, 1.050 * s, 0))
 
 	# ── Pelvis ───────────────────────────────────────────────────────────────────
 	_mi(root, _box(0.33*s, 0.20*s, 0.18*s), pants, Vector3(0, 0.88 * s, 0))
-
-	# Shoulder caps
-	_mi(root, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3(-0.245*s, 1.42*s, 0))
-	_mi(root, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3( 0.245*s, 1.42*s, 0))
 
 	# ── Left arm chain: LUA (shoulder) → LLA (elbow) → LHand (wrist) ───────────
 	var lua := Node3D.new(); lua.name = "LUA"
