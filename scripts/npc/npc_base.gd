@@ -259,7 +259,8 @@ func take_punch(amount: float, attacker_id: int) -> void:
 		health = 0.0
 		_die(attacker_id)
 		return
-	_stagger()  # always stagger from punch regardless of current health
+	_stagger()
+	_on_hurt(attacker_id)
 
 func _on_hurt(_attacker_id: int) -> void:
 	pass  # Override to react

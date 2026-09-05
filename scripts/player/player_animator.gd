@@ -16,6 +16,7 @@ var _torso: Node3D
 
 var _anim_t      := 0.0
 var _speed       := 0.0
+var _jump_t      := 0.0
 var _is_punching := false
 var _in_air      := false
 var locked       := false  # set true by player_controller during finisher
@@ -43,6 +44,8 @@ func set_speed(speed: float) -> void:
 	_speed = speed
 
 func set_in_air(in_air: bool) -> void:
+	if in_air and not _in_air:
+		_jump_t = 0.0  # just left ground — start jumpsquat sequence
 	_in_air = in_air
 
 func _process(delta: float) -> void:
@@ -58,18 +61,28 @@ func _process(delta: float) -> void:
 	if locked:
 		return
 
-	# ── In-air: jump pose, no walk cycle ──────────────────────────────────────
+	# ── In-air: jumpsquat windup → guard pose, legs straight ──────────────────
 	if _in_air:
-		var k := 0.18  # lerp speed per frame
+		_jump_t += delta
+		var k := 0.22
 		if not _is_punching:
-			if _lua: _lua.rotation.x = lerpf(_lua.rotation.x, -0.52, k)
-			if _rua: _rua.rotation.x = lerpf(_rua.rotation.x, -0.52, k)
-			if _lla: _lla.rotation.x = lerpf(_lla.rotation.x,  0.0,  k)
-			if _rla: _rla.rotation.x = lerpf(_rla.rotation.x,  0.0,  k)
-		if _lul: _lul.rotation.x = lerpf(_lul.rotation.x,  0.28, k)
-		if _rul: _rul.rotation.x = lerpf(_rul.rotation.x,  0.28, k)
-		if _lll: _lll.rotation.x = lerpf(_lll.rotation.x,  0.50, k)
-		if _rll: _rll.rotation.x = lerpf(_rll.rotation.x,  0.50, k)
+			if _jump_t < 0.16:
+				# Jumpsquat: arms swing back behind the body (same width apart, x-only)
+				if _lua: _lua.rotation.x = lerpf(_lua.rotation.x,  0.82, 0.38)
+				if _rua: _rua.rotation.x = lerpf(_rua.rotation.x,  0.82, 0.38)
+				if _lla: _lla.rotation.x = lerpf(_lla.rotation.x,  0.0,  0.38)
+				if _rla: _rla.rotation.x = lerpf(_rla.rotation.x,  0.0,  0.38)
+			else:
+				# Guard pose: elbows high, forearms angled in front of face
+				if _lua: _lua.rotation.x = lerpf(_lua.rotation.x, -2.40, k)
+				if _rua: _rua.rotation.x = lerpf(_rua.rotation.x, -2.40, k)
+				if _lla: _lla.rotation.x = lerpf(_lla.rotation.x,  0.72, k)
+				if _rla: _rla.rotation.x = lerpf(_rla.rotation.x,  0.72, k)
+		# Legs straight
+		if _lul: _lul.rotation.x = lerpf(_lul.rotation.x, 0.0, k)
+		if _rul: _rul.rotation.x = lerpf(_rul.rotation.x, 0.0, k)
+		if _lll: _lll.rotation.x = lerpf(_lll.rotation.x, 0.0, k)
+		if _rll: _rll.rotation.x = lerpf(_rll.rotation.x, 0.0, k)
 		if _torso: _torso.position.y = 1.28 + sin(_anim_t * 0.4) * 0.006
 		return
 

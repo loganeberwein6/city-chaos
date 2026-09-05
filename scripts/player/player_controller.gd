@@ -182,7 +182,7 @@ func _process(delta: float) -> void:
 	if not _is_local:
 		return
 	_update_weapon_mesh()
-	camera.position.x = lerpf(camera.position.x, _cam_offset_x, 8.0 * delta)
+	spring_arm.position.x = lerpf(spring_arm.position.x, _cam_offset_x, 8.0 * delta)
 
 func _create_crosshair() -> void:
 	_crosshair = CanvasLayer.new()
@@ -509,7 +509,7 @@ func _equip_slot(idx: int) -> void:
 	WeaponModel.build(weapon_mesh_root, wid)
 	weapon_mesh_root.visible = true
 	if _is_local:
-		_cam_offset_x = 0.9 if wid != "" else 0.5
+		_cam_offset_x = 0.35 if wid != "" else 0.0
 		if _crosshair:
 			_crosshair.visible = (wid != "")
 
@@ -703,34 +703,36 @@ func _finisher_wwe(npc: Node3D) -> void:
 	var slam_dir := to_npc.normalized() if to_npc.length_squared() > 0.01 else mesh_root.basis.z
 	var npc_pos  := npc.global_position
 
-	# Phase 1 (0.18 s): charge lunge toward NPC — arms out, body leans
+	# Phase 1 (0.18 s): charge lunge — slight sideways lean begins
 	var tw_charge := create_tween().set_parallel(true)
-	tw_charge.tween_property(mesh_root, "rotation:x", deg_to_rad(-30.0), 0.18)
-	if rua: tw_charge.tween_property(rua, "rotation:x", 0.80, 0.18)
-	if lua: tw_charge.tween_property(lua, "rotation:x", 0.80, 0.18)
+	tw_charge.tween_property(mesh_root, "rotation:x", deg_to_rad(-15.0), 0.18)
+	tw_charge.tween_property(mesh_root, "rotation:z", deg_to_rad(-25.0), 0.18)
+	if rua: tw_charge.tween_property(rua, "rotation:x", 0.45, 0.18)
+	if lua: tw_charge.tween_property(lua, "rotation:x", 0.45, 0.18)
 	tw_charge.tween_property(self, "global_position",
 		global_position + slam_dir * maxf(to_npc.length() - 1.2, 0.4), 0.18)
 	await get_tree().create_timer(0.18).timeout
 
-	# Phase 2a (0.24 s): leap up — player goes horizontal (body-slam flight pose)
+	# Phase 2a (0.24 s): leap up — player rotates fully on their SIDE (like a spear tackle)
 	var arc_top := npc_pos + Vector3(0, 3.2, 0) - slam_dir * 0.4
 	var tw_rise := create_tween().set_parallel(true)
 	tw_rise.set_ease(Tween.EASE_OUT)
 	tw_rise.set_trans(Tween.TRANS_QUAD)
-	tw_rise.tween_property(mesh_root, "rotation:x", deg_to_rad(-90.0), 0.24)
-	if rua: tw_rise.tween_property(rua, "rotation:x", -0.35, 0.24)
-	if lua: tw_rise.tween_property(lua, "rotation:x", -0.35, 0.24)
+	tw_rise.tween_property(mesh_root, "rotation:x", 0.0, 0.24)
+	tw_rise.tween_property(mesh_root, "rotation:z", deg_to_rad(-90.0), 0.24)
+	if rua: tw_rise.tween_property(rua, "rotation:x", 0.30, 0.24)
+	if lua: tw_rise.tween_property(lua, "rotation:x", 0.30, 0.24)
 	tw_rise.tween_property(self, "global_position", arc_top, 0.24)
 	await get_tree().create_timer(0.24).timeout
 
-	# Phase 2b (0.20 s): fall body-first down onto NPC torso
+	# Phase 2b (0.20 s): fall sideways down onto NPC torso
 	var tw_fall := create_tween().set_parallel(true)
 	tw_fall.set_ease(Tween.EASE_IN)
 	tw_fall.set_trans(Tween.TRANS_QUAD)
 	tw_fall.tween_property(self, "global_position",
 		Vector3(npc_pos.x, npc_pos.y, npc_pos.z), 0.20)
 	if is_instance_valid(npc) and npc_mr:
-		npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(-60.0), 0.20)
+		npc.create_tween().tween_property(npc_mr, "rotation:z", deg_to_rad(-70.0), 0.20)
 	await get_tree().create_timer(0.20).timeout
 
 	# Impact
@@ -739,10 +741,10 @@ func _finisher_wwe(npc: Node3D) -> void:
 			hud.camera_shake(0.65)
 	AudioManager.play_3d("punch", global_position)
 
-	# NPC gets slammed flat and skids away
+	# NPC gets slammed sideways and skids away
 	if is_instance_valid(npc):
 		if npc_mr:
-			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(90.0), 0.20)
+			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(90.0), 0.22)
 		var npc_slide := npc.create_tween()
 		npc_slide.set_ease(Tween.EASE_OUT)
 		npc_slide.tween_property(npc, "global_position",
@@ -750,8 +752,9 @@ func _finisher_wwe(npc: Node3D) -> void:
 		npc_slide.tween_property(npc, "global_position",
 			npc_pos + slam_dir * 3.8, 0.22)
 
-	# Phase 3 (0.30 s): player stands back up
+	# Phase 3 (0.30 s): player rolls back upright
 	var tw_stand := create_tween().set_parallel(true)
+	tw_stand.tween_property(mesh_root, "rotation:z", 0.0, 0.30)
 	tw_stand.tween_property(mesh_root, "rotation:x", 0.0, 0.30)
 	if rua: tw_stand.tween_property(rua, "rotation:x", 0.0, 0.30)
 	if lua: tw_stand.tween_property(lua, "rotation:x", 0.0, 0.30)
@@ -759,6 +762,7 @@ func _finisher_wwe(npc: Node3D) -> void:
 
 	mesh_root.position.y = _mesh_root_base_y
 	mesh_root.rotation.x = 0.0
+	mesh_root.rotation.z = 0.0
 	if rua: rua.rotation.x = 0.0
 	if lua: lua.rotation.x = 0.0
 	if is_instance_valid(npc) and npc.has_method("complete_finisher"):
