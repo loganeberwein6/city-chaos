@@ -19,6 +19,10 @@ WantedSystem="*res://scripts/autoloads/wanted_system.gd"
 NetworkManager="*res://scripts/autoloads/network_manager.gd"
 GameManager="*res://scripts/autoloads/game_manager.gd"
 LagCompensator="*res://scripts/autoloads/lag_compensator.gd"
+PoliceSpawner="*res://scripts/autoloads/police_spawner.gd"
+AudioManager="*res://scripts/autoloads/audio_manager.gd"
+DayNightCycle="*res://scripts/autoloads/day_night_cycle.gd"
+WeaponPickupSpawner="*res://scripts/autoloads/weapon_pickup_spawner.gd"
 
 [display]
 

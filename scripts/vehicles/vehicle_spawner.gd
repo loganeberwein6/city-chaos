@@ -133,7 +133,10 @@ func _broadcast_vehicle_sync() -> void:
 		if is_instance_valid(v) and _vehicle_ids.has(v):
 			var p: Vector3 = v.global_position
 			var r: Vector3 = v.global_rotation
-			batch.append([_vehicle_ids[v], p.x, p.y, p.z, r.x, r.y, r.z])
+			var vel := Vector3.ZERO
+			if v is RigidBody3D:
+				vel = v.linear_velocity
+			batch.append([_vehicle_ids[v], p.x, p.y, p.z, r.x, r.y, r.z, vel.x, vel.y, vel.z])
 	if not batch.is_empty():
 		_rpc_sync_vehicles.rpc(batch)
 
@@ -151,10 +154,19 @@ func _rpc_sync_vehicles(batch: Array) -> void:
 		var vid: int = entry[0]
 		var pos := Vector3(entry[1], entry[2], entry[3])
 		var rot := Vector3(entry[4], entry[5], entry[6])
+		var vel := Vector3(entry[7], entry[8], entry[9])
 		if _client_vehicles.has(vid) and is_instance_valid(_client_vehicles[vid]):
 			var ghost: Node3D = _client_vehicles[vid]
 			ghost.global_position = ghost.global_position.lerp(pos, 0.4)
 			ghost.global_rotation = rot
+			ghost.set_meta("vel", vel)
+
+func _process(delta: float) -> void:
+	if multiplayer.is_server(): return
+	for vid in _client_vehicles:
+		var ghost: Node3D = _client_vehicles[vid]
+		if is_instance_valid(ghost) and ghost.has_meta("vel"):
+			ghost.global_position += (ghost.get_meta("vel") as Vector3) * delta * 0.5
 
 @rpc("authority", "reliable", "call_remote")
 func _rpc_despawn_vehicle(vid: int) -> void:

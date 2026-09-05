@@ -7,6 +7,7 @@ signal player_left(peer_id: int)
 signal connected_to_host()
 signal connection_failed()
 signal host_disconnected()
+signal game_starting()
 
 const GAME_PORT    := 7777
 const BEACON_PORT  := 7778
@@ -175,3 +176,14 @@ func _on_server_disconnected() -> void:
 	is_hosting = false
 	connected_players.clear()
 	host_disconnected.emit()
+
+# ── Game start ────────────────────────────────────────────────────────────────
+
+func start_game_for_all() -> void:
+	if not multiplayer.is_server():
+		return
+	_rpc_start_game.rpc()
+
+@rpc("authority", "reliable", "call_local")
+func _rpc_start_game() -> void:
+	game_starting.emit()

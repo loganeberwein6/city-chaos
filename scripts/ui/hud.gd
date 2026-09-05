@@ -16,11 +16,13 @@ var _star_icons: Array[TextureRect] = []
 var _hotbar_slots: Array[PanelContainer] = []
 var _respawn_countdown := 0.0
 var _is_dead := false
+var _kill_feed: VBoxContainer = null
 
 func _ready() -> void:
 	add_to_group("hud")
 	_build_star_display()
 	_build_hotbar()
+	_build_kill_feed()
 	death_overlay.hide()
 	star_row.visible = false
 	WantedSystem.stars_changed.connect(_on_stars_changed)
@@ -139,9 +141,51 @@ func _format_cash(amount: int) -> String:
 		count += 1
 	return result
 
+# ── Kill feed ──────────────────────────────────────────────────────────────────
+
+func _build_kill_feed() -> void:
+	_kill_feed = VBoxContainer.new()
+	_kill_feed.anchor_left   = 1.0
+	_kill_feed.anchor_top    = 0.0
+	_kill_feed.anchor_right  = 1.0
+	_kill_feed.anchor_bottom = 0.5
+	_kill_feed.offset_left   = -265
+	_kill_feed.offset_top    = 55
+	_kill_feed.offset_right  = -8
+	_kill_feed.add_theme_constant_override("separation", 4)
+	$HUDRoot.add_child(_kill_feed)
+
+func _add_kill_entry(killer_id: int, victim_id: int) -> void:
+	if _kill_feed == null: return
+	var kname := _peer_name(killer_id)
+	var vname := _peer_name(victim_id)
+	var lbl := Label.new()
+	lbl.text = "%s >> %s" % [kname, vname]
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	lbl.add_theme_font_size_override("font_size", 13)
+	var local_id := multiplayer.get_unique_id()
+	if killer_id == local_id:
+		lbl.add_theme_color_override("font_color", Color(0.3, 1.0, 0.4))
+	elif victim_id == local_id:
+		lbl.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+	else:
+		lbl.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	_kill_feed.add_child(lbl)
+	if _kill_feed.get_child_count() > 8:
+		_kill_feed.get_child(0).queue_free()
+	var tween := create_tween()
+	tween.tween_delay(4.0)
+	tween.tween_property(lbl, "modulate:a", 0.0, 1.0)
+	tween.tween_callback(lbl.queue_free)
+
+func _peer_name(pid: int) -> String:
+	var data: Dictionary = NetworkManager.connected_players.get(pid, {})
+	return data.get("name", "P%d" % pid)
+
 # ── Death overlay ──────────────────────────────────────────────────────────────
 
-func _on_player_died(victim_id: int, _killer_id: int) -> void:
+func _on_player_died(victim_id: int, killer_id: int) -> void:
+	_add_kill_entry(killer_id, victim_id)
 	var local_id := multiplayer.get_unique_id()
 	if victim_id != local_id:
 		return

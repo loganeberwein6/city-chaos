@@ -42,6 +42,7 @@ var _is_local  := false
 
 var _animator: Node = null
 var _punch_cooldown := 0.0
+var _name_tag: Label3D = null
 
 # ── Death camera ───────────────────────────────────────────────────────────────
 var _death_cam_target: Node3D = null
@@ -81,6 +82,7 @@ func _ready() -> void:
 	_load_hero_component()
 	add_to_group("players")
 	_equip_slot(active_weapon_slot)
+	_setup_name_tag()
 
 func _exit_tree() -> void:
 	GameManager.unregister_player(peer_id)
@@ -114,6 +116,24 @@ func _apply_hero_stats() -> void:
 		max_health = overrides["max_health"]
 		health     = max_health
 
+func _setup_name_tag() -> void:
+	_name_tag = Label3D.new()
+	_name_tag.pixel_size = 0.006
+	_name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_name_tag.font_size = 42
+	_name_tag.outline_size = 6
+	_name_tag.position = Vector3(0, 2.3, 0)
+	_name_tag.visible = not _is_local
+	mesh_root.add_child(_name_tag)
+	_update_name_tag()
+	if not _is_local:
+		get_tree().create_timer(1.0).timeout.connect(_update_name_tag, CONNECT_ONE_SHOT)
+
+func _update_name_tag() -> void:
+	if not is_instance_valid(_name_tag): return
+	var pdata: Dictionary = NetworkManager.connected_players.get(peer_id, {})
+	_name_tag.text = pdata.get("name", "P%d" % peer_id)
+
 func set_hero(hid: String) -> void:
 	hero_id = hid
 	CharacterModel.build(mesh_root, hero_id)
@@ -129,7 +149,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	if event is InputEventMouseMotion and current_vehicle == null:
+	if event is InputEventMouseMotion:
 		_rotate_camera(event.relative)
 	if event.is_action_pressed("jump") and is_on_floor() and current_vehicle == null:
 		velocity.y = jump_velocity
@@ -161,6 +181,7 @@ func _physics_process(delta: float) -> void:
 		_process_death_camera(delta)
 		return
 	if current_vehicle != null:
+		spring_arm.spring_length = lerpf(spring_arm.spring_length, 9.0, 0.12)
 		_apply_vehicle_input()
 		global_position = current_vehicle.global_position + Vector3(0, 1.2, 0)
 		_sync_position()
@@ -330,6 +351,7 @@ func _punch() -> void:
 	if _punch_cooldown > 0.0:
 		return
 	_punch_cooldown = 0.5
+	AudioManager.play_3d("punch", global_position)
 
 	if _animator:
 		_animator.play_punch()
@@ -350,6 +372,7 @@ func _punch() -> void:
 		best.take_damage(25.0, peer_id)
 
 func _fire_weapon(weapon_id: String) -> void:
+	AudioManager.play_3d("gunshot_" + weapon_id, camera.global_position)
 	var from := camera.global_position
 	var dir  := -camera.global_basis.z
 	var client_time := Time.get_ticks_msec()
@@ -456,8 +479,12 @@ func _spawn_dropped_weapon(weapon_id: String) -> void:
 
 func _try_vehicle_interact() -> void:
 	if current_vehicle:
+		# Exit to the side of the vehicle
+		var exit_offset := current_vehicle.global_basis.x * 2.5 + Vector3(0, 0.6, 0)
+		global_position = current_vehicle.global_position + exit_offset
 		current_vehicle.call("exit_vehicle")
 		current_vehicle = null
+		spring_arm.spring_length = camera_distance
 		return
 	for v in get_tree().get_nodes_in_group("vehicles"):
 		if not is_instance_valid(v): continue
