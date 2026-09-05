@@ -36,9 +36,11 @@ var weapon_slots: Array[Dictionary] = []  # [{id, ammo, reserve}, ...]
 @onready var mesh_root:        Node3D      = $MeshRoot
 @onready var weapon_mesh_root: Node3D      = $WeaponMeshRoot
 
-var _cam_pitch := deg_to_rad(-20.0)
-var _cam_yaw   := 0.0
-var _is_local  := false
+var _cam_pitch    := deg_to_rad(-20.0)
+var _cam_yaw      := 0.0
+var _cam_offset_x := 0.5
+var _is_local     := false
+var _crosshair: CanvasLayer = null
 
 var _animator: Node = null
 var _punch_cooldown := 0.0
@@ -80,6 +82,7 @@ func _ready() -> void:
 	if _is_local:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		camera.current = true
+		_create_crosshair()
 	GameManager.register_player(peer_id, self)
 	_init_weapon_slots()
 	_load_hero_component()
@@ -174,6 +177,34 @@ func _rotate_camera(delta: Vector2) -> void:
 	spring_arm.rotation.y = _cam_yaw
 	_cam_pitch = clampf(_cam_pitch - delta.y * camera_sensitivity, deg_to_rad(camera_min_pitch), deg_to_rad(camera_max_pitch))
 	spring_arm.rotation.x = _cam_pitch
+
+func _process(delta: float) -> void:
+	if not _is_local:
+		return
+	_update_weapon_mesh()
+	camera.position.x = lerpf(camera.position.x, _cam_offset_x, 8.0 * delta)
+
+func _create_crosshair() -> void:
+	_crosshair = CanvasLayer.new()
+	var ctrl := Control.new()
+	ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_crosshair.add_child(ctrl)
+	var lbl := Label.new()
+	lbl.text = "+"
+	lbl.add_theme_font_size_override("font_size", 32)
+	lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.9))
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ctrl.add_child(lbl)
+	add_child(_crosshair)
+	_crosshair.visible = false
+
+func _update_weapon_mesh() -> void:
+	var local_offset := Vector3(0.35, 1.0, -0.45)
+	var target_basis := mesh_root.global_transform.basis
+	weapon_mesh_root.global_transform = Transform3D(target_basis,
+		mesh_root.global_position + target_basis * local_offset)
 
 # ── Physics ────────────────────────────────────────────────────────────────────
 
@@ -477,6 +508,10 @@ func _equip_slot(idx: int) -> void:
 	var wid: String = weapon_slots[idx].get("id", "")
 	WeaponModel.build(weapon_mesh_root, wid)
 	weapon_mesh_root.visible = true
+	if _is_local:
+		_cam_offset_x = 0.9 if wid != "" else 0.5
+		if _crosshair:
+			_crosshair.visible = (wid != "")
 
 @rpc("any_peer", "unreliable_ordered", "call_remote")
 func _rpc_equip(idx: int) -> void:
@@ -579,7 +614,7 @@ func _finisher_kick(npc: Node3D) -> void:
 		var to_npc := npc.global_position - global_position
 		to_npc.y = 0.0
 		if to_npc.length() > 0.1:
-			var raw_yaw := atan2(to_npc.x, to_npc.z)
+			var raw_yaw := atan2(to_npc.x, to_npc.z) + PI
 			# normalize to shortest arc from current yaw so camera doesn't spin the wrong way
 			var diff := fmod(raw_yaw - _cam_yaw + PI * 3.0, TAU) - PI
 			_cam_yaw += diff
@@ -612,26 +647,42 @@ func _finisher_uppercut(npc: Node3D) -> void:
 	var rla: Node3D = mesh_root.find_child("RLA", true, false)
 	var lua: Node3D = mesh_root.find_child("LUA", true, false)
 	var npc_start_y: float = npc.global_position.y
+
+	# Uppercut swing
 	var swing_tw := create_tween().set_parallel(true)
 	if rua: swing_tw.tween_property(rua, "rotation:x", -1.65, 0.14)
 	if rla: swing_tw.tween_property(rla, "rotation:x", -0.90, 0.14)
 	if lua: swing_tw.tween_property(lua, "rotation:x", 0.50, 0.14)
 	await get_tree().create_timer(0.12).timeout
+
+	# NPC launches HIGH with smooth ease-out
 	if is_instance_valid(npc):
 		var up_tw := npc.create_tween()
-		up_tw.tween_property(npc, "global_position:y", npc_start_y + 3.5, 0.50)
+		up_tw.set_ease(Tween.EASE_OUT)
+		up_tw.set_trans(Tween.TRANS_SINE)
+		up_tw.tween_property(npc, "global_position:y", npc_start_y + 5.5, 0.65)
 		if npc_mr:
-			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(-25.0), 0.50)
-	await get_tree().create_timer(0.25).timeout
+			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(-30.0), 0.65)
+	await get_tree().create_timer(0.30).timeout
+
+	# Arm raises — knife held STRAIGHT UP, elbow fully extended
 	if rua:
-		create_tween().tween_property(rua, "rotation:x", -1.25, 0.15)
+		var arm_tw := create_tween().set_parallel(true)
+		arm_tw.tween_property(rua, "rotation:x", -2.20, 0.18)  # arm nearly overhead, pointing up
+		if rla: arm_tw.tween_property(rla, "rotation:x", 0.0, 0.18)  # elbow fully extended
 	var knife := _spawn_knife_mesh()
-	await get_tree().create_timer(0.45).timeout
+	await get_tree().create_timer(0.58).timeout
+
+	# NPC falls back down — smooth ease-in
 	if is_instance_valid(npc):
-		npc.create_tween().tween_property(npc, "global_position:y", npc_start_y, 0.48)
+		var down_tw := npc.create_tween()
+		down_tw.set_ease(Tween.EASE_IN)
+		down_tw.set_trans(Tween.TRANS_SINE)
+		down_tw.tween_property(npc, "global_position:y", npc_start_y, 0.58)
 		if npc_mr:
-			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(80.0), 0.48)
-	await get_tree().create_timer(0.42).timeout
+			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(80.0), 0.58)
+	await get_tree().create_timer(0.52).timeout
+
 	if is_instance_valid(knife): knife.queue_free()
 	var ret_tw := create_tween().set_parallel(true)
 	if rua: ret_tw.tween_property(rua, "rotation:x", 0.0, 0.22)
@@ -646,32 +697,70 @@ func _finisher_wwe(npc: Node3D) -> void:
 	var npc_mr: Node3D = npc.get_node_or_null("MeshRoot")
 	var rua: Node3D = mesh_root.find_child("RUA", true, false)
 	var lua: Node3D = mesh_root.find_child("LUA", true, false)
-	var rush_tw := create_tween().set_parallel(true)
-	rush_tw.tween_property(mesh_root, "rotation:x", deg_to_rad(-40.0), 0.22)
-	if rua: rush_tw.tween_property(rua, "rotation:x", 0.60, 0.22)
-	if lua: rush_tw.tween_property(lua, "rotation:x", 0.60, 0.22)
-	rush_tw.tween_property(self, "global_position",
-		global_position + (npc.global_position - global_position) * 0.85, 0.22)
-	await get_tree().create_timer(0.22).timeout
+
+	var to_npc := npc.global_position - global_position
+	to_npc.y = 0.0
+	var slam_dir := to_npc.normalized() if to_npc.length_squared() > 0.01 else mesh_root.basis.z
+	var npc_pos  := npc.global_position
+
+	# Phase 1 (0.18 s): charge lunge toward NPC — arms out, body leans
+	var tw_charge := create_tween().set_parallel(true)
+	tw_charge.tween_property(mesh_root, "rotation:x", deg_to_rad(-30.0), 0.18)
+	if rua: tw_charge.tween_property(rua, "rotation:x", 0.80, 0.18)
+	if lua: tw_charge.tween_property(lua, "rotation:x", 0.80, 0.18)
+	tw_charge.tween_property(self, "global_position",
+		global_position + slam_dir * maxf(to_npc.length() - 1.2, 0.4), 0.18)
+	await get_tree().create_timer(0.18).timeout
+
+	# Phase 2a (0.24 s): leap up — player goes horizontal (body-slam flight pose)
+	var arc_top := npc_pos + Vector3(0, 3.2, 0) - slam_dir * 0.4
+	var tw_rise := create_tween().set_parallel(true)
+	tw_rise.set_ease(Tween.EASE_OUT)
+	tw_rise.set_trans(Tween.TRANS_QUAD)
+	tw_rise.tween_property(mesh_root, "rotation:x", deg_to_rad(-90.0), 0.24)
+	if rua: tw_rise.tween_property(rua, "rotation:x", -0.35, 0.24)
+	if lua: tw_rise.tween_property(lua, "rotation:x", -0.35, 0.24)
+	tw_rise.tween_property(self, "global_position", arc_top, 0.24)
+	await get_tree().create_timer(0.24).timeout
+
+	# Phase 2b (0.20 s): fall body-first down onto NPC torso
+	var tw_fall := create_tween().set_parallel(true)
+	tw_fall.set_ease(Tween.EASE_IN)
+	tw_fall.set_trans(Tween.TRANS_QUAD)
+	tw_fall.tween_property(self, "global_position",
+		Vector3(npc_pos.x, npc_pos.y, npc_pos.z), 0.20)
 	if is_instance_valid(npc) and npc_mr:
-		npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(-80.0), 0.18)
-	await get_tree().create_timer(0.25).timeout
-	var stand_tw := create_tween().set_parallel(true)
-	stand_tw.tween_property(mesh_root, "rotation:x", 0.0, 0.35)
-	if rua: stand_tw.tween_property(rua, "rotation:x", 0.0, 0.35)
-	if lua: stand_tw.tween_property(lua, "rotation:x", 0.0, 0.35)
-	await get_tree().create_timer(0.35).timeout
-	var jump_tw := create_tween()
-	jump_tw.tween_property(mesh_root, "position:y", _mesh_root_base_y + 0.55, 0.22)
-	jump_tw.tween_property(mesh_root, "position:y", _mesh_root_base_y, 0.20)
-	await get_tree().create_timer(0.38).timeout
+		npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(-60.0), 0.20)
+	await get_tree().create_timer(0.20).timeout
+
+	# Impact
 	for hud in get_tree().get_nodes_in_group("hud"):
 		if hud.has_method("camera_shake"):
-			hud.camera_shake(0.55)
+			hud.camera_shake(0.65)
 	AudioManager.play_3d("punch", global_position)
-	await get_tree().create_timer(0.22).timeout
+
+	# NPC gets slammed flat and skids away
+	if is_instance_valid(npc):
+		if npc_mr:
+			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(90.0), 0.20)
+		var npc_slide := npc.create_tween()
+		npc_slide.set_ease(Tween.EASE_OUT)
+		npc_slide.tween_property(npc, "global_position",
+			npc_pos + slam_dir * 3.0 + Vector3(0, 0.4, 0), 0.15)
+		npc_slide.tween_property(npc, "global_position",
+			npc_pos + slam_dir * 3.8, 0.22)
+
+	# Phase 3 (0.30 s): player stands back up
+	var tw_stand := create_tween().set_parallel(true)
+	tw_stand.tween_property(mesh_root, "rotation:x", 0.0, 0.30)
+	if rua: tw_stand.tween_property(rua, "rotation:x", 0.0, 0.30)
+	if lua: tw_stand.tween_property(lua, "rotation:x", 0.0, 0.30)
+	await get_tree().create_timer(0.30).timeout
+
 	mesh_root.position.y = _mesh_root_base_y
 	mesh_root.rotation.x = 0.0
+	if rua: rua.rotation.x = 0.0
+	if lua: lua.rotation.x = 0.0
 	if is_instance_valid(npc) and npc.has_method("complete_finisher"):
 		npc.call("complete_finisher", peer_id)
 
@@ -707,7 +796,7 @@ func _spawn_knife_mesh() -> MeshInstance3D:
 	mat.metallic = 0.90
 	mat.roughness = 0.15
 	knife.material_override = mat
-	knife.position = Vector3(0.0, -0.20, 0.0)
+	knife.position = Vector3(0.0, 0.12, 0.0)  # blade points straight up above hand
 	if rhand:
 		rhand.add_child(knife)
 	else:

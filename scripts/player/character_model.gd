@@ -72,10 +72,6 @@ static func _build_humanoid(
 	_mi(torso_joint, _box(0.38*s, 0.27*s, 0.21*s), shirt, Vector3(0,  0.125*s, 0))  # chest
 	_mi(torso_joint, _box(0.30*s, 0.22*s, 0.18*s), shirt, Vector3(0, -0.125*s, 0))  # waist
 
-	# Shoulder caps — children of Torso so they follow torso rotation during punch
-	_mi(torso_joint, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3(-0.245*s,  0.14*s, 0))
-	_mi(torso_joint, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3( 0.245*s,  0.14*s, 0))
-
 	# Belt (stays on root — doesn't rotate with torso, giving belt-slip look on punch)
 	var belt_mat := _mat(Color(0.14, 0.11, 0.08))
 	_mi(root, _box(0.36*s, 0.055*s, 0.21*s), belt_mat, Vector3(0, 1.050 * s, 0))
@@ -88,6 +84,7 @@ static func _build_humanoid(
 	lua.position = Vector3(-0.25 * s, 1.35 * s, 0)
 	root.add_child(lua)
 	_mi(lua, _capsule(0.055 * s, 0.26 * s), shirt, Vector3(0, -0.13 * s, 0))
+	_mi(lua, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3(0, 0.07*s, 0))  # shoulder cap follows arm
 	var lla := Node3D.new(); lla.name = "LLA"
 	lla.position = Vector3(0, -0.26 * s, 0)
 	lua.add_child(lla)
@@ -102,6 +99,7 @@ static func _build_humanoid(
 	rua.position = Vector3(0.25 * s, 1.35 * s, 0)
 	root.add_child(rua)
 	_mi(rua, _capsule(0.055 * s, 0.26 * s), shirt, Vector3(0, -0.13 * s, 0))
+	_mi(rua, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3(0, 0.07*s, 0))  # shoulder cap follows arm
 	var rla := Node3D.new(); rla.name = "RLA"
 	rla.position = Vector3(0, -0.26 * s, 0)
 	rua.add_child(rla)

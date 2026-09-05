@@ -107,16 +107,16 @@ func play_punch() -> void:
 
 	# Phase 1 (0.18 s): wind-up — left elbow pulls back, fist near neck, torso twists left
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_lua,    "rotation:x",  0.55, 0.18)  # left upper arm swings backward
-	tw.tween_property(_lua,    "rotation:z",  0.40, 0.18)  # arm swings inward toward neck (mirrored)
-	if _lla:   tw.tween_property(_lla,   "rotation:x", -1.70, 0.18)  # elbow bends sharply up
+	tw.tween_property(_lua,    "rotation:x",  0.80, 0.18)  # left upper arm swings backward (more pullback)
+	tw.tween_property(_lua,    "rotation:z",  0.60, 0.18)  # arm swings inward toward neck — more lateral
+	if _lla:   tw.tween_property(_lla,   "rotation:x", -1.90, 0.18)  # elbow bends high and to the side
 	if _rua:   tw.tween_property(_rua,   "rotation:x",  0.18, 0.18)  # right arm counter-balances
 	if _torso: tw.tween_property(_torso, "rotation:y", -0.35, 0.18)  # torso twists left (mirrored)
 	await tw.finished
 
 	# Phase 2 (0.10 s): strike — arm extends and torso untwists simultaneously
 	var tw2 := create_tween().set_parallel(true)
-	tw2.tween_property(_lua,   "rotation:x", -1.30, 0.10)
+	tw2.tween_property(_lua,   "rotation:x", -1.45, 0.10)
 	tw2.tween_property(_lua,   "rotation:z",  0.0,  0.10)
 	if _lla:   tw2.tween_property(_lla,   "rotation:x",  0.15, 0.10)
 	if _rua:   tw2.tween_property(_rua,   "rotation:x",  0.35, 0.10)
