@@ -506,6 +506,7 @@ func _try_vehicle_interact() -> void:
 
 func _do_finisher(npc: Node3D) -> void:
 	_in_finisher = true
+	if _animator: _animator.set("locked", true)
 	npc.call("prepare_finisher")
 	var dir := (npc.global_position - global_position)
 	dir.y = 0.0
@@ -518,6 +519,7 @@ func _do_finisher(npc: Node3D) -> void:
 		await _finisher_uppercut(npc)
 	else:
 		await _finisher_wwe(npc)
+	if _animator: _animator.set("locked", false)
 	_in_finisher = false
 
 func _finisher_kick(npc: Node3D) -> void:

@@ -17,6 +17,7 @@ var _torso: Node3D
 var _anim_t      := 0.0
 var _speed       := 0.0
 var _is_punching := false
+var locked       := false  # set true by player_controller during finisher
 
 func setup(mesh_root: Node3D) -> void:
 	_mesh_root = mesh_root
@@ -48,6 +49,11 @@ func _process(delta: float) -> void:
 		return
 
 	_anim_t += delta * maxf(_speed * 1.5, 0.9)
+
+	# Finisher tweens own all joints; don't fight them
+	if locked:
+		return
+
 	var t   := _anim_t
 	var spd := _speed
 
@@ -64,17 +70,14 @@ func _process(delta: float) -> void:
 	if _rll: _rll.rotation.x = maxf(-sin(t), 0.0) * leg_amp * 0.65
 	if _lll: _lll.rotation.x = maxf( sin(t), 0.0) * leg_amp * 0.65
 
-	# Shoulder joints swing arms opposite to legs
-	if _lua: _lua.rotation.x = -sin(t) * arm_amp
+	# Arm/torso joints: punch tween owns these — don't overwrite during punch
 	if not _is_punching:
+		if _lua: _lua.rotation.x = -sin(t) * arm_amp
 		if _rua: _rua.rotation.x =  sin(t) * arm_amp
-
-	# Gentle elbow sway for the non-punching arm
-	if _lla: _lla.rotation.x = maxf(sin(t), 0.0) * arm_amp * 0.30
-	if not _is_punching:
+		if _lla: _lla.rotation.x = maxf(sin(t), 0.0) * arm_amp * 0.30
 		if _rla: _rla.rotation.x = maxf(-sin(t), 0.0) * arm_amp * 0.30
 
-	# Torso idle breath
+	# Torso idle breath (position only; rotation.z handled by punch tween)
 	if _torso:
 		_torso.position.y = 1.28 + sin(t * 0.4) * 0.006
 

@@ -98,7 +98,7 @@ static func _build_humanoid(
 	lll.position = Vector3(0, -0.36 * s, 0)
 	lul.add_child(lll)
 	_mi(lll, _capsule(0.058 * s, 0.33 * s), pants, Vector3(0, -0.165 * s, 0))
-	_mi(lll, _box(0.09 * s, 0.055 * s, 0.20 * s), shoe, Vector3(0, -0.36 * s, 0.04 * s))
+	_mi(lll, _box(0.09 * s, 0.055 * s, 0.20 * s), shoe, Vector3(0, -0.40 * s, 0.04 * s))
 
 	# ── Right leg chain: RUL (hip) → RLL (knee, with foot attached) ────────────
 	var rul := Node3D.new(); rul.name = "RUL"
@@ -109,7 +109,7 @@ static func _build_humanoid(
 	rll.position = Vector3(0, -0.36 * s, 0)
 	rul.add_child(rll)
 	_mi(rll, _capsule(0.058 * s, 0.33 * s), pants, Vector3(0, -0.165 * s, 0))
-	_mi(rll, _box(0.09 * s, 0.055 * s, 0.20 * s), shoe, Vector3(0, -0.36 * s, 0.04 * s))
+	_mi(rll, _box(0.09 * s, 0.055 * s, 0.20 * s), shoe, Vector3(0, -0.40 * s, 0.04 * s))
 
 	accessory_fn.call(root)
 
