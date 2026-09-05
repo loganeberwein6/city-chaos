@@ -22,6 +22,7 @@ var target: Node3D = null
 var _state_timer := 0.0
 var _wander_target := Vector3.ZERO
 var _rng := RandomNumberGenerator.new()
+var _staggered := false
 
 const GRAVITY := 20.0
 
@@ -102,6 +103,10 @@ func _physics_process(delta: float) -> void:
 # ── State machine ─────────────────────────────────────────────────────────────
 
 func _tick_state(delta: float) -> void:
+	if _staggered:
+		velocity.x = move_toward(velocity.x, 0.0, 14.0 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, 14.0 * delta)
+		return
 	_state_timer -= delta
 	match state:
 		State.IDLE:   _tick_idle(delta)
@@ -199,18 +204,54 @@ func take_damage(amount: float, attacker_id: int) -> void:
 		_die(attacker_id)
 	else:
 		_on_hurt(attacker_id)
+		if health < max_health * 0.5 and not _staggered:
+			_stagger()
 
 func _on_hurt(_attacker_id: int) -> void:
 	pass  # Override to react
+
+func _stagger() -> void:
+	_staggered = true
+	var mr: Node3D = get_node_or_null("MeshRoot")
+	if mr:
+		var tw := create_tween()
+		tw.tween_property(mr, "rotation:z", deg_to_rad(22.0), 0.10)
+		tw.tween_property(mr, "rotation:z", deg_to_rad(-12.0), 0.08)
+		tw.tween_property(mr, "rotation:z", 0.0, 0.30)
+	var back := global_basis.z * 3.0
+	back.y = 0.1
+	velocity += back
+	await get_tree().create_timer(0.55).timeout
+	if is_instance_valid(self) and state != State.DEAD:
+		_staggered = false
+
+func prepare_finisher() -> void:
+	state = State.DEAD
+	health = 0.0
+	_staggered = false
+	set_physics_process(false)
+	velocity = Vector3.ZERO
+
+func complete_finisher(killer_id: int) -> void:
+	died.emit(self, killer_id)
+	_drop_loot()
+	await get_tree().create_timer(6.0).timeout
+	if is_instance_valid(self): queue_free()
+
+func _ragdoll_fall() -> void:
+	var mr: Node3D = get_node_or_null("MeshRoot")
+	if not mr: return
+	create_tween().tween_property(mr, "rotation:x", deg_to_rad(72.0), 0.38)
 
 func _die(killer_id: int) -> void:
 	state = State.DEAD
 	velocity = Vector3.ZERO
 	set_physics_process(false)
+	_ragdoll_fall()
 	died.emit(self, killer_id)
 	_drop_loot()
 	await get_tree().create_timer(8.0).timeout
-	queue_free()
+	if is_instance_valid(self): queue_free()
 
 func _drop_loot() -> void:
 	if drop_cash_max > 0:

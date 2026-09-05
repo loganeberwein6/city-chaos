@@ -87,15 +87,19 @@ func play_punch() -> void:
 	var tween := _rua.create_tween()
 	tween.set_parallel(true)
 
-	# Phase 1: 0.09 s — swing upper arm forward, extend lower arm & hand
+	# Phase 1: 0.09 s — right arm forward, left arm pulls back, torso twists
 	tween.tween_property(_rua,   "rotation:x",  -1.15, 0.09)
 	tween.tween_property(_rla,   "position:z",   _rla_rest_pos.z   - 0.28, 0.09)
 	tween.tween_property(_rhand, "position:z",   _rhand_rest_pos.z - 0.28, 0.09)
+	if _lua:   tween.tween_property(_lua,   "rotation:x",  0.42, 0.09)
+	if _torso: tween.tween_property(_torso, "rotation:z", -0.10, 0.09)
 
-	# Phase 2: 0.20 s — return
+	# Phase 2: 0.20 s — return all
 	tween.chain().set_parallel(true)
 	tween.tween_property(_rua,   "rotation:x",   0.0,               0.20)
 	tween.tween_property(_rla,   "position:z",   _rla_rest_pos.z,   0.20)
 	tween.tween_property(_rhand, "position:z",   _rhand_rest_pos.z, 0.20)
+	if _lua:   tween.tween_property(_lua,   "rotation:x",  0.0,  0.20)
+	if _torso: tween.tween_property(_torso, "rotation:z",  0.0,  0.20)
 
 	tween.chain().tween_callback(func() -> void: _is_punching = false)

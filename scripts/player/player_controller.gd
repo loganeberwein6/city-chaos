@@ -43,6 +43,7 @@ var _is_local  := false
 var _animator: Node = null
 var _punch_cooldown := 0.0
 var _name_tag: Label3D = null
+var _in_finisher := false
 
 # ── Death camera ───────────────────────────────────────────────────────────────
 var _death_cam_target: Node3D = null
@@ -144,7 +145,7 @@ func set_hero(hid: String) -> void:
 # ── Input ──────────────────────────────────────────────────────────────────────
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _is_local or is_dead:
+	if not _is_local or is_dead or _in_finisher:
 		return
 	if event is InputEventMouseButton and event.pressed:
 		if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
@@ -179,6 +180,9 @@ func _physics_process(delta: float) -> void:
 		return
 	if is_dead:
 		_process_death_camera(delta)
+		return
+	if _in_finisher:
+		velocity = Vector3.ZERO
 		return
 	if current_vehicle != null:
 		spring_arm.spring_length = lerpf(spring_arm.spring_length, 9.0, 0.12)
@@ -218,7 +222,7 @@ func _apply_movement(delta: float) -> void:
 	if move_dir.length() > 0.01:
 		velocity.x = move_toward(velocity.x, move_dir.x * target_speed, acceleration * ctrl * delta)
 		velocity.z = move_toward(velocity.z, move_dir.z * target_speed, acceleration * ctrl * delta)
-		mesh_root.rotation.y = lerp_angle(mesh_root.rotation.y, atan2(-move_dir.x, -move_dir.z), 12.0 * delta)
+		mesh_root.rotation.y = lerp_angle(mesh_root.rotation.y, atan2(move_dir.x, move_dir.z), 12.0 * delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, friction * ctrl * delta)
 		velocity.z = move_toward(velocity.z, 0.0, friction * ctrl * delta)
@@ -368,8 +372,12 @@ func _punch() -> void:
 		if d < best_dist:
 			best_dist = d
 			best = npc
-	if best != null and best.has_method("take_damage"):
-		best.take_damage(25.0, peer_id)
+	if best != null:
+		var npc_health: float = best.get("health") if "health" in best else 0.0
+		if npc_health > 0.0 and npc_health <= 25.0 and best.has_method("prepare_finisher"):
+			_do_finisher(best)
+		elif best.has_method("take_damage"):
+			best.take_damage(25.0, peer_id)
 
 func _fire_weapon(weapon_id: String) -> void:
 	AudioManager.play_3d("gunshot_" + weapon_id, camera.global_position)
@@ -493,3 +501,158 @@ func _try_vehicle_interact() -> void:
 		v.call("enter_vehicle", self)
 		current_vehicle = v
 		return
+
+# ── Finisher system ────────────────────────────────────────────────────────────
+
+func _do_finisher(npc: Node3D) -> void:
+	_in_finisher = true
+	npc.call("prepare_finisher")
+	var dir := (npc.global_position - global_position)
+	dir.y = 0.0
+	if dir.length() > 0.1:
+		mesh_root.rotation.y = atan2(dir.x, dir.z)
+	var choice := randi() % 3
+	if choice == 0:
+		await _finisher_kick(npc)
+	elif choice == 1:
+		await _finisher_uppercut(npc)
+	else:
+		await _finisher_wwe(npc)
+	_in_finisher = false
+
+func _finisher_kick(npc: Node3D) -> void:
+	var npc_mr: Node3D = npc.get_node_or_null("MeshRoot")
+	var rul: Node3D = mesh_root.get_node_or_null("RUL")
+	var rll: Node3D = mesh_root.get_node_or_null("RLL")
+	var kick_dir := (npc.global_position - global_position)
+	kick_dir.y = 0.3
+	kick_dir = kick_dir.normalized()
+	var kick_tw := create_tween().set_parallel(true)
+	if rul: kick_tw.tween_property(rul, "rotation:x", -1.35, 0.14)
+	if rll: kick_tw.tween_property(rll, "rotation:x", -0.70, 0.14)
+	await get_tree().create_timer(0.10).timeout
+	if is_instance_valid(npc):
+		var fly_tw := npc.create_tween().set_parallel(true)
+		fly_tw.tween_property(npc, "global_position",
+			npc.global_position + kick_dir * 4.5 + Vector3(0, 0.4, 0), 0.45)
+		if npc_mr:
+			fly_tw.tween_property(npc_mr, "rotation:z",
+				kick_dir.x * deg_to_rad(-80.0), 0.45)
+			fly_tw.tween_property(npc_mr, "rotation:x", deg_to_rad(35.0), 0.45)
+	await get_tree().create_timer(0.14).timeout
+	var ret_tw := create_tween().set_parallel(true)
+	if rul: ret_tw.tween_property(rul, "rotation:x", 0.0, 0.25)
+	if rll: ret_tw.tween_property(rll, "rotation:x", 0.0, 0.25)
+	await get_tree().create_timer(0.35).timeout
+	_finisher_shoot_cosmetic()
+	await get_tree().create_timer(0.45).timeout
+	if is_instance_valid(npc) and npc.has_method("complete_finisher"):
+		npc.call("complete_finisher", peer_id)
+
+func _finisher_uppercut(npc: Node3D) -> void:
+	var npc_mr: Node3D = npc.get_node_or_null("MeshRoot")
+	var rua: Node3D = mesh_root.get_node_or_null("RUA")
+	var rla: Node3D = mesh_root.get_node_or_null("RLA")
+	var lua: Node3D = mesh_root.get_node_or_null("LUA")
+	var npc_start_y: float = npc.global_position.y
+	var swing_tw := create_tween().set_parallel(true)
+	if rua: swing_tw.tween_property(rua, "rotation:x", -1.65, 0.14)
+	if rla: swing_tw.tween_property(rla, "rotation:x", -0.90, 0.14)
+	if lua: swing_tw.tween_property(lua, "rotation:x", 0.50, 0.14)
+	await get_tree().create_timer(0.12).timeout
+	if is_instance_valid(npc):
+		var up_tw := npc.create_tween()
+		up_tw.tween_property(npc, "global_position:y", npc_start_y + 3.5, 0.50)
+		if npc_mr:
+			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(-25.0), 0.50)
+	await get_tree().create_timer(0.25).timeout
+	if rua:
+		create_tween().tween_property(rua, "rotation:x", -1.25, 0.15)
+	var knife := _spawn_knife_mesh()
+	await get_tree().create_timer(0.45).timeout
+	if is_instance_valid(npc):
+		npc.create_tween().tween_property(npc, "global_position:y", npc_start_y, 0.48)
+		if npc_mr:
+			npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(80.0), 0.48)
+	await get_tree().create_timer(0.42).timeout
+	if is_instance_valid(knife): knife.queue_free()
+	var ret_tw := create_tween().set_parallel(true)
+	if rua: ret_tw.tween_property(rua, "rotation:x", 0.0, 0.22)
+	if rla: ret_tw.tween_property(rla, "rotation:x", 0.0, 0.22)
+	if lua: ret_tw.tween_property(lua, "rotation:x", 0.0, 0.22)
+	AudioManager.play_3d("punch", global_position)
+	await get_tree().create_timer(0.25).timeout
+	if is_instance_valid(npc) and npc.has_method("complete_finisher"):
+		npc.call("complete_finisher", peer_id)
+
+func _finisher_wwe(npc: Node3D) -> void:
+	var npc_mr: Node3D = npc.get_node_or_null("MeshRoot")
+	var rua: Node3D = mesh_root.get_node_or_null("RUA")
+	var lua: Node3D = mesh_root.get_node_or_null("LUA")
+	var rush_tw := create_tween().set_parallel(true)
+	rush_tw.tween_property(mesh_root, "rotation:x", deg_to_rad(-40.0), 0.22)
+	if rua: rush_tw.tween_property(rua, "rotation:x", 0.60, 0.22)
+	if lua: rush_tw.tween_property(lua, "rotation:x", 0.60, 0.22)
+	rush_tw.tween_property(self, "global_position",
+		global_position + (npc.global_position - global_position) * 0.85, 0.22)
+	await get_tree().create_timer(0.22).timeout
+	if is_instance_valid(npc) and npc_mr:
+		npc.create_tween().tween_property(npc_mr, "rotation:x", deg_to_rad(-80.0), 0.18)
+	await get_tree().create_timer(0.25).timeout
+	var stand_tw := create_tween().set_parallel(true)
+	stand_tw.tween_property(mesh_root, "rotation:x", 0.0, 0.35)
+	if rua: stand_tw.tween_property(rua, "rotation:x", 0.0, 0.35)
+	if lua: stand_tw.tween_property(lua, "rotation:x", 0.0, 0.35)
+	await get_tree().create_timer(0.35).timeout
+	var jump_tw := create_tween()
+	jump_tw.tween_property(mesh_root, "position:y", 0.55, 0.22)
+	jump_tw.tween_property(mesh_root, "position:y", 0.0, 0.20)
+	await get_tree().create_timer(0.38).timeout
+	for hud in get_tree().get_nodes_in_group("hud"):
+		if hud.has_method("camera_shake"):
+			hud.camera_shake(0.55)
+	AudioManager.play_3d("punch", global_position)
+	await get_tree().create_timer(0.22).timeout
+	mesh_root.position.y = 0.0
+	mesh_root.rotation.x = 0.0
+	if is_instance_valid(npc) and npc.has_method("complete_finisher"):
+		npc.call("complete_finisher", peer_id)
+
+func _finisher_shoot_cosmetic() -> void:
+	var rhand: Node3D = mesh_root.get_node_or_null("RHand")
+	if not rhand: return
+	var flash := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.10; sm.height = 0.20
+	flash.mesh = sm
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.85, 0.2)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.70, 0.0)
+	mat.emission_energy_multiplier = 6.0
+	flash.material_override = mat
+	rhand.add_child(flash)
+	for hud in get_tree().get_nodes_in_group("hud"):
+		if hud.has_method("camera_shake"):
+			hud.camera_shake(0.25)
+	AudioManager.play_3d("gunshot_pistol", global_position)
+	await get_tree().create_timer(0.14).timeout
+	if is_instance_valid(flash): flash.queue_free()
+
+func _spawn_knife_mesh() -> MeshInstance3D:
+	var rhand: Node3D = mesh_root.get_node_or_null("RHand")
+	var knife := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.035, 0.22, 0.018)
+	knife.mesh = bm
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.78, 0.80, 0.84)
+	mat.metallic = 0.90
+	mat.roughness = 0.15
+	knife.material_override = mat
+	knife.position = Vector3(0.0, -0.20, 0.0)
+	if rhand:
+		rhand.add_child(knife)
+	else:
+		mesh_root.add_child(knife)
+	return knife
