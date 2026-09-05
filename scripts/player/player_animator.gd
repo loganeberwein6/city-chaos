@@ -86,20 +86,31 @@ func play_punch() -> void:
 		return
 	_is_punching = true
 
-	# Phase 1 (0.09 s): shoulder swings forward, elbow extends, left arm pulls back
+	# Phase 1 (0.18 s): wind-up — elbow pulls back, fist coils near neck, torso twists right
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_rua,   "rotation:x", -1.15, 0.09)
-	if _rla:   tw.tween_property(_rla,   "rotation:x",  0.60, 0.09)
-	if _lua:   tw.tween_property(_lua,   "rotation:x",  0.42, 0.09)
-	if _torso: tw.tween_property(_torso, "rotation:z", -0.10, 0.09)
+	tw.tween_property(_rua,   "rotation:x",  0.55, 0.18)   # upper arm swings backward
+	tw.tween_property(_rua,   "rotation:z", -0.40, 0.18)   # arm swings inward toward neck
+	if _rla:   tw.tween_property(_rla,   "rotation:x", -1.70, 0.18)  # elbow bends sharply up
+	if _lua:   tw.tween_property(_lua,   "rotation:x",  0.18, 0.18)  # left arm counter-balances
+	if _torso: tw.tween_property(_torso, "rotation:y",  0.35, 0.18)  # torso ~20° right
 	await tw.finished
 
-	# Phase 2 (0.20 s): return all joints to rest
+	# Phase 2 (0.10 s): strike — arm extends and torso untwists simultaneously
 	var tw2 := create_tween().set_parallel(true)
-	tw2.tween_property(_rua,   "rotation:x", 0.0, 0.20)
-	if _rla:   tw2.tween_property(_rla,   "rotation:x", 0.0, 0.20)
-	if _lua:   tw2.tween_property(_lua,   "rotation:x", 0.0, 0.20)
-	if _torso: tw2.tween_property(_torso, "rotation:z", 0.0, 0.20)
+	tw2.tween_property(_rua,   "rotation:x", -1.30, 0.10)
+	tw2.tween_property(_rua,   "rotation:z",  0.0,  0.10)
+	if _rla:   tw2.tween_property(_rla,   "rotation:x",  0.15, 0.10)
+	if _lua:   tw2.tween_property(_lua,   "rotation:x",  0.35, 0.10)
+	if _torso: tw2.tween_property(_torso, "rotation:y", -0.12, 0.10)  # slight counter-follow
 	await tw2.finished
+
+	# Phase 3 (0.22 s): return everything to rest
+	var tw3 := create_tween().set_parallel(true)
+	tw3.tween_property(_rua,   "rotation:x", 0.0, 0.22)
+	tw3.tween_property(_rua,   "rotation:z", 0.0, 0.22)
+	if _rla:   tw3.tween_property(_rla,   "rotation:x", 0.0, 0.22)
+	if _lua:   tw3.tween_property(_lua,   "rotation:x", 0.0, 0.22)
+	if _torso: tw3.tween_property(_torso, "rotation:y", 0.0, 0.22)
+	await tw3.finished
 
 	_is_punching = false

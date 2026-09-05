@@ -528,28 +528,70 @@ func _finisher_kick(npc: Node3D) -> void:
 	var npc_mr: Node3D = npc.get_node_or_null("MeshRoot")
 	var rul: Node3D = mesh_root.find_child("RUL", true, false)
 	var rll: Node3D = mesh_root.find_child("RLL", true, false)
+	var rua: Node3D = mesh_root.find_child("RUA", true, false)
+	var rla: Node3D = mesh_root.find_child("RLA", true, false)
+
 	var kick_dir := (npc.global_position - global_position)
-	kick_dir.y = 0.3
+	kick_dir.y = 0.0
 	kick_dir = kick_dir.normalized()
+
+	# ── Kick ──
 	var kick_tw := create_tween().set_parallel(true)
 	if rul: kick_tw.tween_property(rul, "rotation:x", -1.35, 0.14)
 	if rll: kick_tw.tween_property(rll, "rotation:x", -0.70, 0.14)
 	await get_tree().create_timer(0.10).timeout
+
+	# ── NPC ragdoll parabolic arc ──
 	if is_instance_valid(npc):
-		var fly_tw := npc.create_tween().set_parallel(true)
-		fly_tw.tween_property(npc, "global_position",
-			npc.global_position + kick_dir * 4.5 + Vector3(0, 0.4, 0), 0.45)
+		var start_pos := npc.global_position
+		var mid_pos   := start_pos + kick_dir * 3.0 + Vector3(0, 2.5, 0)
+		var end_pos   := start_pos + kick_dir * 6.0
+		var fly_tw    := npc.create_tween()
+		fly_tw.tween_property(npc, "global_position", mid_pos, 0.30)
+		fly_tw.tween_property(npc, "global_position", end_pos, 0.35)
 		if npc_mr:
-			fly_tw.tween_property(npc_mr, "rotation:z",
-				kick_dir.x * deg_to_rad(-80.0), 0.45)
-			fly_tw.tween_property(npc_mr, "rotation:x", deg_to_rad(35.0), 0.45)
+			var tumble_tw := npc.create_tween().set_parallel(true)
+			tumble_tw.tween_property(npc_mr, "rotation:x", deg_to_rad(90.0), 0.65)
+			tumble_tw.tween_property(npc_mr, "rotation:z", kick_dir.x * deg_to_rad(-120.0), 0.65)
+
 	await get_tree().create_timer(0.14).timeout
-	var ret_tw := create_tween().set_parallel(true)
-	if rul: ret_tw.tween_property(rul, "rotation:x", 0.0, 0.25)
-	if rll: ret_tw.tween_property(rll, "rotation:x", 0.0, 0.25)
+	if rul: create_tween().tween_property(rul, "rotation:x", 0.0, 0.25)
+	if rll: create_tween().tween_property(rll, "rotation:x", 0.0, 0.25)
+
+	# ── Player turns body 90° left (pivots away from NPC) ──
+	await get_tree().create_timer(0.22).timeout
+	create_tween().tween_property(mesh_root, "rotation:y",
+		mesh_root.rotation.y - deg_to_rad(90.0), 0.25)
+
+	# ── NPC lands ──
 	await get_tree().create_timer(0.35).timeout
+
+	# ── Camera swings to look at NPC; arm rises to aim ──
+	if is_instance_valid(npc):
+		var to_npc := npc.global_position - global_position
+		to_npc.y = 0.0
+		if to_npc.length() > 0.1:
+			_cam_yaw = atan2(to_npc.x, to_npc.z)
+			create_tween().tween_property(spring_arm, "rotation:y", _cam_yaw, 0.22)
+	if rua:
+		var aim_tw := create_tween().set_parallel(true)
+		aim_tw.tween_property(rua, "rotation:x", -0.85, 0.22)
+		aim_tw.tween_property(rua, "rotation:z",  0.55, 0.22)  # splay toward NPC side
+		if rla: aim_tw.tween_property(rla, "rotation:x", 0.10, 0.22)
+	await get_tree().create_timer(0.32).timeout
+
+	# ── Shoot ──
 	_finisher_shoot_cosmetic()
-	await get_tree().create_timer(0.45).timeout
+	await get_tree().create_timer(0.25).timeout
+
+	# ── Arm returns ──
+	if rua:
+		var ret_tw := create_tween().set_parallel(true)
+		ret_tw.tween_property(rua, "rotation:x", 0.0, 0.22)
+		ret_tw.tween_property(rua, "rotation:z", 0.0, 0.22)
+		if rla: ret_tw.tween_property(rla, "rotation:x", 0.0, 0.22)
+
+	await get_tree().create_timer(0.12).timeout
 	if is_instance_valid(npc) and npc.has_method("complete_finisher"):
 		npc.call("complete_finisher", peer_id)
 
