@@ -60,9 +60,17 @@ func _try_pay_player() -> void:
 func _build_visual(root: Node3D) -> void:
 	_npc_build_humanoid(root,
 		_npc_mat(Color(0.88, 0.75, 0.62)),
-		_npc_mat(Color(0.95, 0.95, 0.92)),
-		_npc_mat(Color(0.20, 0.20, 0.25)),
-		_npc_mat(Color(0.15, 0.12, 0.10)))
+		_npc_mat(Color(0.16, 0.16, 0.20)),          # dark suit jacket
+		_npc_mat(Color(0.14, 0.14, 0.18)),          # matching dark trousers
+		_npc_mat(Color(0.12, 0.10, 0.08), 0.22, 0.32))  # polished dress shoes
+	# White dress shirt visible at chest opening
+	var shirt_m := _npc_mat(Color(0.95, 0.95, 0.94))
+	var shirt_strip := BoxMesh.new(); shirt_strip.size = Vector3(0.11, 0.17, 0.015)
+	_npc_mi(root, shirt_strip, shirt_m, Vector3(0, 1.385, -0.106))
+	# Red power tie
+	var tie_m := _npc_mat(Color(0.62, 0.06, 0.06))
+	var tie := BoxMesh.new(); tie.size = Vector3(0.030, 0.190, 0.012)
+	_npc_mi(root, tie, tie_m, Vector3(0, 1.345, -0.108))
 
 func _on_hurt(attacker_id: int) -> void:
 	var attacker := GameManager.get_player_node(attacker_id)

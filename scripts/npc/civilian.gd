@@ -48,11 +48,29 @@ func _tick_attack(delta: float) -> void:
 			WantedSystem.report_crime("punch_civilian")
 
 func _build_visual(root: Node3D) -> void:
-	_npc_build_humanoid(root,
-		_npc_mat(Color(0.80, 0.68, 0.55)),
-		_npc_mat(Color(0.55, 0.55, 0.60)),
-		_npc_mat(Color(0.30, 0.32, 0.38)),
-		_npc_mat(Color(0.20, 0.18, 0.15)))
+	var r := _rng
+	# Diverse realistic skin tones
+	var skin_roll := r.randf()
+	var skin: StandardMaterial3D
+	if skin_roll < 0.25:
+		skin = _npc_mat(Color(0.34, 0.23, 0.17))   # dark brown
+	elif skin_roll < 0.50:
+		skin = _npc_mat(Color(0.62, 0.46, 0.32))   # medium brown
+	elif skin_roll < 0.75:
+		skin = _npc_mat(Color(0.80, 0.65, 0.50))   # light brown / olive
+	else:
+		skin = _npc_mat(Color(0.93, 0.80, 0.66))   # fair
+	# Vivid casual shirt
+	var hue := r.randf()
+	var shirt := _npc_mat(Color.from_hsv(hue, r.randf_range(0.45, 0.85), r.randf_range(0.55, 0.92)))
+	# Pants: jeans, khaki, or dark trousers
+	var pants: StandardMaterial3D
+	var proll := r.randi() % 3
+	if proll == 0:   pants = _npc_mat(Color(0.24, 0.32, 0.54))   # blue jeans
+	elif proll == 1: pants = _npc_mat(Color(0.44, 0.36, 0.24))   # khaki
+	else:            pants = _npc_mat(Color(0.18, 0.18, 0.20))   # dark trousers
+	var shoe := _npc_mat(Color(r.randf_range(0.10, 0.40), r.randf_range(0.08, 0.32), r.randf_range(0.06, 0.22)))
+	_npc_build_humanoid(root, skin, shirt, pants, shoe)
 
 func _on_hurt(attacker_id: int) -> void:
 	if state != State.ATTACK:

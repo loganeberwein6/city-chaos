@@ -45,9 +45,9 @@ func _build_visual(root: Node3D) -> void:
 	var shoe_m  := _npc_mat(Color(0.20, 0.18, 0.15))
 	_npc_build_humanoid(root, skin_m, shrt_m, pant_m, shoe_m)
 
-func _npc_mat(color: Color) -> StandardMaterial3D:
+func _npc_mat(color: Color, metallic: float = 0.0, roughness: float = 0.80) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
-	m.albedo_color = color; m.roughness = 0.8; return m
+	m.albedo_color = color; m.metallic = metallic; m.roughness = roughness; return m
 
 func _npc_mi(parent: Node3D, mesh: Mesh, mat: StandardMaterial3D, pos: Vector3) -> void:
 	var mi := MeshInstance3D.new()
@@ -57,56 +57,80 @@ func _npc_mi(parent: Node3D, mesh: Mesh, mat: StandardMaterial3D, pos: Vector3) 
 func _npc_build_humanoid(root: Node3D,
 		skin_m: StandardMaterial3D, shrt_m: StandardMaterial3D,
 		pant_m: StandardMaterial3D, shoe_m: StandardMaterial3D) -> void:
-	# Static body parts
-	var head_mesh := SphereMesh.new(); head_mesh.radius = 0.115; head_mesh.height = 0.23
+
+	# ── Head & neck ────────────────────────────────────────────────────────────
+	var head_mesh := SphereMesh.new(); head_mesh.radius = 0.115; head_mesh.height = 0.235
 	_npc_mi(root, head_mesh, skin_m, Vector3(0, 1.72, 0))
-	var neck_mesh := CylinderMesh.new(); neck_mesh.top_radius = 0.048; neck_mesh.bottom_radius = 0.048; neck_mesh.height = 0.09
+	# Tapered neck — slightly wider at base
+	var neck_mesh := CylinderMesh.new()
+	neck_mesh.top_radius = 0.040; neck_mesh.bottom_radius = 0.052; neck_mesh.height = 0.090
 	_npc_mi(root, neck_mesh, skin_m, Vector3(0, 1.615, 0))
-	var torso_mesh := BoxMesh.new(); torso_mesh.size = Vector3(0.34, 0.46, 0.19)
-	_npc_mi(root, torso_mesh, shrt_m, Vector3(0, 1.28, 0))
-	var pelvis_mesh := BoxMesh.new(); pelvis_mesh.size = Vector3(0.30, 0.18, 0.17)
-	_npc_mi(root, pelvis_mesh, pant_m, Vector3(0, 0.88, 0))
-	var sp_mesh := BoxMesh.new(); sp_mesh.size = Vector3(0.10, 0.08, 0.10)
-	_npc_mi(root, sp_mesh, shrt_m, Vector3(-0.22, 1.50, 0))
-	_npc_mi(root, sp_mesh, shrt_m, Vector3( 0.22, 1.50, 0))
+	# Shirt collar ring visible below neck
+	var collar_m := CylinderMesh.new()
+	collar_m.top_radius = 0.055; collar_m.bottom_radius = 0.065; collar_m.height = 0.052
+	_npc_mi(root, collar_m, shrt_m, Vector3(0, 1.558, 0))
+
+	# ── Torso — wider chest narrows to waist ───────────────────────────────────
+	var chest_mesh := BoxMesh.new(); chest_mesh.size = Vector3(0.38, 0.27, 0.20)
+	_npc_mi(root, chest_mesh, shrt_m, Vector3(0, 1.405, 0))
+	var waist_mesh := BoxMesh.new(); waist_mesh.size = Vector3(0.30, 0.22, 0.18)
+	_npc_mi(root, waist_mesh, shrt_m, Vector3(0, 1.155, 0))
+
+	# ── Pelvis / hips ──────────────────────────────────────────────────────────
+	var pelvis_mesh := BoxMesh.new(); pelvis_mesh.size = Vector3(0.33, 0.20, 0.18)
+	_npc_mi(root, pelvis_mesh, pant_m, Vector3(0, 0.880, 0))
+
+	# Belt — dark strip between shirt and pants
+	var belt_mat := _npc_mat(Color(0.14, 0.11, 0.08))
+	var belt_mesh := BoxMesh.new(); belt_mesh.size = Vector3(0.36, 0.056, 0.21)
+	_npc_mi(root, belt_mesh, belt_mat, Vector3(0, 1.050, 0))
+
+	# Shoulder caps — give upper arm definition
+	var sp_mesh := BoxMesh.new(); sp_mesh.size = Vector3(0.115, 0.080, 0.115)
+	_npc_mi(root, sp_mesh, shrt_m, Vector3(-0.245, 1.525, 0))
+	_npc_mi(root, sp_mesh, shrt_m, Vector3( 0.245, 1.525, 0))
 
 	# ── Arm joints (NpcLUA / NpcRUA) — animated by _update_walk_anim ──────────
-	var ua_mesh   := CapsuleMesh.new(); ua_mesh.radius   = 0.055; ua_mesh.height   = 0.26
-	var la_mesh   := CapsuleMesh.new(); la_mesh.radius   = 0.045; la_mesh.height   = 0.24
-	var hand_mesh := BoxMesh.new();     hand_mesh.size   = Vector3(0.07, 0.055, 0.038)
+	var ua_mesh   := CapsuleMesh.new(); ua_mesh.radius   = 0.058; ua_mesh.height   = 0.27
+	var la_mesh   := CapsuleMesh.new(); la_mesh.radius   = 0.048; la_mesh.height   = 0.24
+	var hand_mesh := BoxMesh.new();     hand_mesh.size   = Vector3(0.075, 0.058, 0.040)
 
 	var nlua := Node3D.new(); nlua.name = "NpcLUA"
-	nlua.position = Vector3(-0.25, 1.35, 0)
+	nlua.position = Vector3(-0.265, 1.40, 0)
 	root.add_child(nlua)
-	_npc_mi(nlua, ua_mesh,   shrt_m, Vector3(0, -0.13, 0))
-	_npc_mi(nlua, la_mesh,   shrt_m, Vector3(0, -0.41, 0))
-	_npc_mi(nlua, hand_mesh, skin_m, Vector3(0, -0.57, 0))
+	_npc_mi(nlua, ua_mesh,   shrt_m, Vector3(0, -0.135, 0))
+	_npc_mi(nlua, la_mesh,   shrt_m, Vector3(0, -0.410, 0))
+	_npc_mi(nlua, hand_mesh, skin_m, Vector3(0, -0.575, 0))
 
 	var nrua := Node3D.new(); nrua.name = "NpcRUA"
-	nrua.position = Vector3(0.25, 1.35, 0)
+	nrua.position = Vector3(0.265, 1.40, 0)
 	root.add_child(nrua)
-	_npc_mi(nrua, ua_mesh,   shrt_m, Vector3(0, -0.13, 0))
-	_npc_mi(nrua, la_mesh,   shrt_m, Vector3(0, -0.41, 0))
-	_npc_mi(nrua, hand_mesh, skin_m, Vector3(0, -0.57, 0))
+	_npc_mi(nrua, ua_mesh,   shrt_m, Vector3(0, -0.135, 0))
+	_npc_mi(nrua, la_mesh,   shrt_m, Vector3(0, -0.410, 0))
+	_npc_mi(nrua, hand_mesh, skin_m, Vector3(0, -0.575, 0))
 
 	# ── Leg joints (NpcLUL / NpcRUL) — animated by _update_walk_anim ──────────
-	var ul_mesh   := CapsuleMesh.new(); ul_mesh.radius   = 0.072; ul_mesh.height   = 0.36
-	var ll_mesh   := CapsuleMesh.new(); ll_mesh.radius   = 0.058; ll_mesh.height   = 0.33
-	var foot_mesh := BoxMesh.new();     foot_mesh.size   = Vector3(0.09, 0.055, 0.20)
+	var ul_mesh   := CapsuleMesh.new(); ul_mesh.radius   = 0.075; ul_mesh.height   = 0.38
+	var ll_mesh   := CapsuleMesh.new(); ll_mesh.radius   = 0.060; ll_mesh.height   = 0.34
+	# Two-piece shoe: flat sole + shoe upper sitting on it
+	var sole_mesh  := BoxMesh.new(); sole_mesh.size  = Vector3(0.092, 0.038, 0.240)
+	var upper_mesh := BoxMesh.new(); upper_mesh.size = Vector3(0.082, 0.055, 0.178)
 
 	var nlul := Node3D.new(); nlul.name = "NpcLUL"
-	nlul.position = Vector3(-0.10, 0.79, 0)
+	nlul.position = Vector3(-0.11, 0.78, 0)
 	root.add_child(nlul)
-	_npc_mi(nlul, ul_mesh,   pant_m, Vector3(0, -0.19, 0))
-	_npc_mi(nlul, ll_mesh,   pant_m, Vector3(0, -0.53, 0))
-	_npc_mi(nlul, foot_mesh, shoe_m, Vector3(0, -0.76, 0.04))
+	_npc_mi(nlul, ul_mesh,    pant_m, Vector3(0, -0.190, 0))
+	_npc_mi(nlul, ll_mesh,    pant_m, Vector3(0, -0.540, 0))
+	_npc_mi(nlul, sole_mesh,  shoe_m, Vector3(0, -0.756, 0.040))
+	_npc_mi(nlul, upper_mesh, shoe_m, Vector3(0, -0.724, 0.015))
 
 	var nrul := Node3D.new(); nrul.name = "NpcRUL"
-	nrul.position = Vector3(0.10, 0.79, 0)
+	nrul.position = Vector3(0.11, 0.78, 0)
 	root.add_child(nrul)
-	_npc_mi(nrul, ul_mesh,   pant_m, Vector3(0, -0.19, 0))
-	_npc_mi(nrul, ll_mesh,   pant_m, Vector3(0, -0.53, 0))
-	_npc_mi(nrul, foot_mesh, shoe_m, Vector3(0, -0.76, 0.04))
+	_npc_mi(nrul, ul_mesh,    pant_m, Vector3(0, -0.190, 0))
+	_npc_mi(nrul, ll_mesh,    pant_m, Vector3(0, -0.540, 0))
+	_npc_mi(nrul, sole_mesh,  shoe_m, Vector3(0, -0.756, 0.040))
+	_npc_mi(nrul, upper_mesh, shoe_m, Vector3(0, -0.724, 0.015))
 
 func _physics_process(delta: float) -> void:
 	if state == State.DEAD:

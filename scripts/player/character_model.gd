@@ -41,6 +41,9 @@ static func _box(x: float, y: float, z: float) -> BoxMesh:
 static func _cylinder(r: float, h: float) -> CylinderMesh:
 	var m := CylinderMesh.new(); m.top_radius = r; m.bottom_radius = r; m.height = h; return m
 
+static func _tcyl(r_top: float, r_bot: float, h: float) -> CylinderMesh:
+	var m := CylinderMesh.new(); m.top_radius = r_top; m.bottom_radius = r_bot; m.height = h; return m
+
 # ── Shared humanoid builder ────────────────────────────────────────────────────
 # scale: multiplier applied to all positions and mesh sizes (for Hulk)
 
@@ -53,15 +56,32 @@ static func _build_humanoid(
 
 	var s := scale
 
-	# Static body parts
-	_mi(root, _sphere(0.115 * s),               skin,  Vector3(0,        1.72 * s,  0))  # Head
-	_mi(root, _cylinder(0.048 * s, 0.09 * s),   skin,  Vector3(0,        1.615 * s, 0))  # Neck
-	_mi(root, _box(0.34*s, 0.46*s, 0.19*s),     shirt, Vector3(0,        1.28 * s,  0)).name = "Torso"
-	_mi(root, _box(0.30*s, 0.18*s, 0.17*s),     pants, Vector3(0,        0.88 * s,  0))  # Pelvis
-	_mi(root, _box(0.10*s, 0.08*s, 0.10*s),     shirt, Vector3(-0.22*s,  1.42 * s,  0))  # L shoulder pad
-	_mi(root, _box(0.10*s, 0.08*s, 0.10*s),     shirt, Vector3( 0.22*s,  1.42 * s,  0))  # R shoulder pad
+	# ── Head & neck ─────────────────────────────────────────────────────────────
+	_mi(root, _sphere(0.115 * s), skin, Vector3(0, 1.72 * s, 0))
+	_mi(root, _tcyl(0.040*s, 0.052*s, 0.090*s), skin,  Vector3(0, 1.615 * s, 0))  # tapered neck
+	_mi(root, _tcyl(0.055*s, 0.065*s, 0.052*s), shirt, Vector3(0, 1.558 * s, 0))  # collar ring
 
-	# ── Left arm chain: LUA (shoulder) → LLA (elbow) → LHand (wrist) ──────────
+	# ── Torso — Node3D container (animated by player_animator) ──────────────────
+	# Torso is a Node3D so both chest and waist boxes animate together when the
+	# animator tweens its position.y (idle breath) and rotation.y (punch twist).
+	var torso_joint := Node3D.new(); torso_joint.name = "Torso"
+	torso_joint.position = Vector3(0, 1.28 * s, 0)
+	root.add_child(torso_joint)
+	_mi(torso_joint, _box(0.38*s, 0.27*s, 0.21*s), shirt, Vector3(0,  0.125*s, 0))  # chest
+	_mi(torso_joint, _box(0.30*s, 0.22*s, 0.18*s), shirt, Vector3(0, -0.125*s, 0))  # waist
+
+	# Belt
+	var belt_mat := _mat(Color(0.14, 0.11, 0.08))
+	_mi(root, _box(0.36*s, 0.055*s, 0.21*s), belt_mat, Vector3(0, 1.050 * s, 0))
+
+	# ── Pelvis ───────────────────────────────────────────────────────────────────
+	_mi(root, _box(0.33*s, 0.20*s, 0.18*s), pants, Vector3(0, 0.88 * s, 0))
+
+	# Shoulder caps
+	_mi(root, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3(-0.245*s, 1.42*s, 0))
+	_mi(root, _box(0.115*s, 0.080*s, 0.115*s), shirt, Vector3( 0.245*s, 1.42*s, 0))
+
+	# ── Left arm chain: LUA (shoulder) → LLA (elbow) → LHand (wrist) ───────────
 	var lua := Node3D.new(); lua.name = "LUA"
 	lua.position = Vector3(-0.25 * s, 1.35 * s, 0)
 	root.add_child(lua)
@@ -73,9 +93,9 @@ static func _build_humanoid(
 	var lhand := Node3D.new(); lhand.name = "LHand"
 	lhand.position = Vector3(0, -0.24 * s, 0)
 	lla.add_child(lhand)
-	_mi(lhand, _box(0.07 * s, 0.055 * s, 0.038 * s), skin, Vector3(0, -0.028 * s, 0))
+	_mi(lhand, _box(0.072*s, 0.056*s, 0.040*s), skin, Vector3(0, -0.028*s, 0))
 
-	# ── Right arm chain: RUA (shoulder) → RLA (elbow) → RHand (wrist) ─────────
+	# ── Right arm chain: RUA (shoulder) → RLA (elbow) → RHand (wrist) ──────────
 	var rua := Node3D.new(); rua.name = "RUA"
 	rua.position = Vector3(0.25 * s, 1.35 * s, 0)
 	root.add_child(rua)
@@ -87,29 +107,31 @@ static func _build_humanoid(
 	var rhand := Node3D.new(); rhand.name = "RHand"
 	rhand.position = Vector3(0, -0.24 * s, 0)
 	rla.add_child(rhand)
-	_mi(rhand, _box(0.07 * s, 0.055 * s, 0.038 * s), skin, Vector3(0, -0.028 * s, 0))
+	_mi(rhand, _box(0.072*s, 0.056*s, 0.040*s), skin, Vector3(0, -0.028*s, 0))
 
-	# ── Left leg chain: LUL (hip) → LLL (knee, with foot attached) ─────────────
+	# ── Left leg chain: LUL (hip) → LLL (knee, with two-piece shoe) ─────────────
 	var lul := Node3D.new(); lul.name = "LUL"
 	lul.position = Vector3(-0.10 * s, 0.79 * s, 0)
 	root.add_child(lul)
-	_mi(lul, _capsule(0.072 * s, 0.36 * s), pants, Vector3(0, -0.18 * s, 0))
+	_mi(lul, _capsule(0.075 * s, 0.38 * s), pants, Vector3(0, -0.190 * s, 0))
 	var lll := Node3D.new(); lll.name = "LLL"
 	lll.position = Vector3(0, -0.36 * s, 0)
 	lul.add_child(lll)
-	_mi(lll, _capsule(0.058 * s, 0.33 * s), pants, Vector3(0, -0.165 * s, 0))
-	_mi(lll, _box(0.09 * s, 0.055 * s, 0.20 * s), shoe, Vector3(0, -0.40 * s, 0.04 * s))
+	_mi(lll, _capsule(0.060*s, 0.34*s), pants, Vector3(0, -0.170*s, 0))
+	_mi(lll, _box(0.092*s, 0.038*s, 0.240*s), shoe, Vector3(0, -0.410*s, 0.040*s))  # sole
+	_mi(lll, _box(0.082*s, 0.055*s, 0.178*s), shoe, Vector3(0, -0.380*s, 0.014*s))  # upper
 
-	# ── Right leg chain: RUL (hip) → RLL (knee, with foot attached) ────────────
+	# ── Right leg chain: RUL (hip) → RLL (knee, with two-piece shoe) ────────────
 	var rul := Node3D.new(); rul.name = "RUL"
 	rul.position = Vector3(0.10 * s, 0.79 * s, 0)
 	root.add_child(rul)
-	_mi(rul, _capsule(0.072 * s, 0.36 * s), pants, Vector3(0, -0.18 * s, 0))
+	_mi(rul, _capsule(0.075 * s, 0.38 * s), pants, Vector3(0, -0.190 * s, 0))
 	var rll := Node3D.new(); rll.name = "RLL"
 	rll.position = Vector3(0, -0.36 * s, 0)
 	rul.add_child(rll)
-	_mi(rll, _capsule(0.058 * s, 0.33 * s), pants, Vector3(0, -0.165 * s, 0))
-	_mi(rll, _box(0.09 * s, 0.055 * s, 0.20 * s), shoe, Vector3(0, -0.40 * s, 0.04 * s))
+	_mi(rll, _capsule(0.060*s, 0.34*s), pants, Vector3(0, -0.170*s, 0))
+	_mi(rll, _box(0.092*s, 0.038*s, 0.240*s), shoe, Vector3(0, -0.410*s, 0.040*s))  # sole
+	_mi(rll, _box(0.082*s, 0.055*s, 0.178*s), shoe, Vector3(0, -0.380*s, 0.014*s))  # upper
 
 	accessory_fn.call(root)
 
@@ -117,9 +139,9 @@ static func _build_humanoid(
 
 static func _build_normal(root: Node3D) -> void:
 	var skin  := _mat(Color(0.88, 0.72, 0.58))
-	var shirt := _mat(Color(0.30, 0.50, 0.80))
-	var pants := _mat(Color(0.20, 0.25, 0.35))
-	var shoe  := _mat(Color(0.15, 0.12, 0.10))
+	var shirt := _mat(Color(0.28, 0.48, 0.82))   # bright blue casual shirt
+	var pants := _mat(Color(0.22, 0.28, 0.48))   # dark jeans
+	var shoe  := _mat(Color(0.88, 0.86, 0.82))   # white sneakers
 	_build_humanoid(root, skin, shirt, pants, shoe, func(_r: Node3D) -> void: pass)
 
 static func _build_batman(root: Node3D) -> void:
@@ -135,7 +157,7 @@ static func _build_batman(root: Node3D) -> void:
 			# Cape
 			_mi(r, _box(0.80, 1.30, 0.03), cape, Vector3(0, 0.95, 0.14))
 			# Bat symbol
-			_mi(r, _box(0.28, 0.10, 0.04), gold, Vector3(0, 1.28, -0.11))
+			_mi(r, _box(0.28, 0.10, 0.04), gold, Vector3(0, 1.40, -0.11))
 			# Belt
 			_mi(r, _box(0.32, 0.06, 0.20), gold, Vector3(0, 0.88, 0))
 	)
@@ -148,7 +170,7 @@ static func _build_flash(root: Node3D) -> void:
 	_build_humanoid(root, skin, red, red, shoe,
 		func(r: Node3D) -> void:
 			# Chest lightning bolt
-			var bolt := _mi(r, _box(0.11, 0.30, 0.04), gold, Vector3(0, 1.28, -0.11))
+			var bolt := _mi(r, _box(0.11, 0.30, 0.04), gold, Vector3(0, 1.40, -0.11))
 			bolt.rotation_degrees.z = 20.0
 			# Ear wings
 			_mi(r, _box(0.03, 0.12, 0.07), gold, Vector3(-0.13, 1.77, 0))
@@ -169,7 +191,7 @@ static func _build_spiderman(root: Node3D) -> void:
 			_mi(r, _box(0.09, 0.055, 0.03), white, Vector3(-0.055, 1.72, -0.115))
 			_mi(r, _box(0.09, 0.055, 0.03), white, Vector3( 0.055, 1.72, -0.115))
 			# Web pattern hint on chest
-			_mi(r, _box(0.30, 0.30, 0.02), web, Vector3(0, 1.28, -0.11))
+			_mi(r, _box(0.30, 0.30, 0.02), web, Vector3(0, 1.40, -0.11))
 	)
 
 static func _build_ironman(root: Node3D) -> void:
@@ -192,7 +214,7 @@ static func _build_ironman(root: Node3D) -> void:
 	_build_humanoid(root, gold, red, red, red,
 		func(r: Node3D) -> void:
 			# Chest arc reactor
-			_mi(r, _cylinder(0.055, 0.04), glow_chest, Vector3(0, 1.28, -0.11))
+			_mi(r, _cylinder(0.055, 0.04), glow_chest, Vector3(0, 1.40, -0.11))
 			# Faceplate visor
 			_mi(r, _box(0.22, 0.06, 0.03), glow_visor, Vector3(0, 1.72, -0.12))
 			# Shoulder pauldrons (bigger overlay)

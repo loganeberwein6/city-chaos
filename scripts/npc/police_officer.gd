@@ -60,8 +60,10 @@ func _tick_attack(delta: float) -> void:
 		var away := global_position + (global_position - target.global_position).normalized() * 6.0
 		_move_toward(away, walk_speed, delta)
 
-	look_at(target.global_position, Vector3.UP)
-	rotation.x = 0.0
+	var look_dir := (target.global_position - global_position)
+	look_dir.y = 0.0
+	if look_dir.length_squared() > 0.01:
+		rotation.y = atan2(look_dir.x, look_dir.z)
 
 	if _shoot_cooldown <= 0.0:
 		_shoot_cooldown = SHOOT_INTERVAL
@@ -88,10 +90,52 @@ func _shoot_at(tgt: Node3D) -> void:
 
 func _build_visual(root: Node3D) -> void:
 	_npc_build_humanoid(root,
-		_npc_mat(Color(0.75, 0.65, 0.55)),
-		_npc_mat(Color(0.10, 0.20, 0.65)),
-		_npc_mat(Color(0.10, 0.18, 0.55)),
-		_npc_mat(Color(0.12, 0.12, 0.12)))
+		_npc_mat(Color(0.78, 0.66, 0.54)),          # skin
+		_npc_mat(Color(0.20, 0.35, 0.82)),          # police blue shirt
+		_npc_mat(Color(0.10, 0.13, 0.36)),          # dark navy pants
+		_npc_mat(Color(0.10, 0.09, 0.09), 0.15, 0.4))  # black leather boots
+
+	# ── Police cap ──────────────────────────────────────────────────────────────
+	var hat_m  := _npc_mat(Color(0.13, 0.15, 0.30))
+	var band_m := _npc_mat(Color(0.06, 0.05, 0.04))
+	var gold_m := _npc_mat(Color(0.88, 0.72, 0.18), 0.50, 0.30)
+	# Crown (slightly tapered top)
+	var crown := CylinderMesh.new()
+	crown.top_radius = 0.088; crown.bottom_radius = 0.106; crown.height = 0.112
+	_npc_mi(root, crown, hat_m, Vector3(0, 1.857, 0))
+	# Brim
+	var brim := CylinderMesh.new()
+	brim.top_radius = 0.158; brim.bottom_radius = 0.152; brim.height = 0.018
+	_npc_mi(root, brim, hat_m, Vector3(0, 1.793, -0.014))
+	# Hat band
+	var band := CylinderMesh.new()
+	band.top_radius = 0.108; band.bottom_radius = 0.108; band.height = 0.018
+	_npc_mi(root, band, band_m, Vector3(0, 1.800, 0))
+	# Badge on cap front
+	var cbadge := BoxMesh.new(); cbadge.size = Vector3(0.036, 0.028, 0.012)
+	_npc_mi(root, cbadge, gold_m, Vector3(0, 1.862, -0.096))
+
+	# ── Chest badge ─────────────────────────────────────────────────────────────
+	var badge := BoxMesh.new(); badge.size = Vector3(0.052, 0.038, 0.014)
+	_npc_mi(root, badge, gold_m, Vector3(-0.105, 1.405, -0.106))
+
+	# ── Sunglasses ──────────────────────────────────────────────────────────────
+	var glass_m := _npc_mat(Color(0.06, 0.06, 0.06))
+	var gl := BoxMesh.new(); gl.size = Vector3(0.060, 0.024, 0.010)
+	_npc_mi(root, gl, glass_m, Vector3(-0.046, 1.720, -0.116))
+	_npc_mi(root, gl, glass_m, Vector3( 0.046, 1.720, -0.116))
+	# Bridge between lenses
+	var bridge := BoxMesh.new(); bridge.size = Vector3(0.018, 0.010, 0.008)
+	_npc_mi(root, bridge, glass_m, Vector3(0, 1.720, -0.116))
+
+	# ── Holster (right hip) ─────────────────────────────────────────────────────
+	var holster_m := _npc_mat(Color(0.14, 0.10, 0.08))
+	var holster := BoxMesh.new(); holster.size = Vector3(0.052, 0.095, 0.038)
+	_npc_mi(root, holster, holster_m, Vector3(0.215, 1.000, 0))
+	# Gun handle visible at holster top
+	var gun_m := _npc_mat(Color(0.18, 0.18, 0.18), 0.45, 0.35)
+	var gun := BoxMesh.new(); gun.size = Vector3(0.024, 0.058, 0.015)
+	_npc_mi(root, gun, gun_m, Vector3(0.215, 1.042, -0.018))
 
 func _on_hurt(_attacker_id: int) -> void:
 	var p := is_player_nearby()

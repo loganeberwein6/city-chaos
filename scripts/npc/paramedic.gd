@@ -84,9 +84,15 @@ func _tick_chase(delta: float) -> void:
 func _build_visual(root: Node3D) -> void:
 	_npc_build_humanoid(root,
 		_npc_mat(Color(0.75, 0.62, 0.50)),
-		_npc_mat(Color(0.92, 0.92, 0.92)),
-		_npc_mat(Color(0.92, 0.92, 0.92)),
-		_npc_mat(Color(0.25, 0.25, 0.25)))
+		_npc_mat(Color(0.90, 0.90, 0.90)),          # white uniform
+		_npc_mat(Color(0.88, 0.88, 0.88)),          # white pants
+		_npc_mat(Color(0.22, 0.22, 0.24)))          # dark shoes
+	# Red cross on left chest
+	var cross_m := _npc_mat(Color(0.90, 0.08, 0.08))
+	var cross_h := BoxMesh.new(); cross_h.size = Vector3(0.072, 0.026, 0.015)  # horizontal bar
+	var cross_v := BoxMesh.new(); cross_v.size = Vector3(0.026, 0.072, 0.015)  # vertical bar
+	_npc_mi(root, cross_h, cross_m, Vector3(-0.10, 1.405, -0.106))
+	_npc_mi(root, cross_v, cross_m, Vector3(-0.10, 1.405, -0.106))
 
 func _on_hurt(_attacker_id: int) -> void:
 	var p := is_player_nearby()

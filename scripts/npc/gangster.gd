@@ -60,10 +60,21 @@ func _shoot_at(tgt: Node3D) -> void:
 
 func _build_visual(root: Node3D) -> void:
 	_npc_build_humanoid(root,
-		_npc_mat(Color(0.30, 0.22, 0.18)),
-		_npc_mat(Color(0.12, 0.12, 0.14)),
-		_npc_mat(Color(0.10, 0.10, 0.12)),
-		_npc_mat(Color(0.08, 0.08, 0.08)))
+		_npc_mat(Color(0.30, 0.22, 0.18)),          # skin
+		_npc_mat(Color(0.10, 0.10, 0.12)),          # dark hoodie
+		_npc_mat(Color(0.10, 0.10, 0.13)),          # dark baggy pants
+		_npc_mat(Color(0.88, 0.86, 0.82)))          # white/grey sneakers
+
+	# Hoodie hood hanging behind head
+	var hood_m := _npc_mat(Color(0.10, 0.10, 0.12))
+	var hood := BoxMesh.new(); hood.size = Vector3(0.28, 0.22, 0.16)
+	_npc_mi(root, hood, hood_m, Vector3(0, 1.680, 0.090))
+
+	# Gold chain
+	var chain_m := _npc_mat(Color(0.88, 0.72, 0.15), 0.72, 0.22)
+	var chain := CylinderMesh.new()
+	chain.top_radius = 0.022; chain.bottom_radius = 0.022; chain.height = 0.185
+	_npc_mi(root, chain, chain_m, Vector3(0, 1.380, -0.086))
 
 func _on_hurt(attacker_id: int) -> void:
 	var attacker := GameManager.get_player_node(attacker_id)
