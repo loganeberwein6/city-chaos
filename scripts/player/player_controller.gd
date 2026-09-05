@@ -44,6 +44,7 @@ var _animator: Node = null
 var _punch_cooldown := 0.0
 var _name_tag: Label3D = null
 var _in_finisher := false
+var _mesh_root_base_y := 0.0
 
 # ── Death camera ───────────────────────────────────────────────────────────────
 var _death_cam_target: Node3D = null
@@ -71,6 +72,7 @@ func _ready() -> void:
 	spring_arm.rotation.x = _cam_pitch
 	spring_arm.add_excluded_object(get_rid())
 	spring_arm.collision_mask = 0
+	_mesh_root_base_y = mesh_root.position.y
 	CharacterModel.build(mesh_root, hero_id)
 	_animator = PlayerAnimator.new()
 	add_child(_animator)
@@ -607,15 +609,15 @@ func _finisher_wwe(npc: Node3D) -> void:
 	if lua: stand_tw.tween_property(lua, "rotation:x", 0.0, 0.35)
 	await get_tree().create_timer(0.35).timeout
 	var jump_tw := create_tween()
-	jump_tw.tween_property(mesh_root, "position:y", 0.55, 0.22)
-	jump_tw.tween_property(mesh_root, "position:y", 0.0, 0.20)
+	jump_tw.tween_property(mesh_root, "position:y", _mesh_root_base_y + 0.55, 0.22)
+	jump_tw.tween_property(mesh_root, "position:y", _mesh_root_base_y, 0.20)
 	await get_tree().create_timer(0.38).timeout
 	for hud in get_tree().get_nodes_in_group("hud"):
 		if hud.has_method("camera_shake"):
 			hud.camera_shake(0.55)
 	AudioManager.play_3d("punch", global_position)
 	await get_tree().create_timer(0.22).timeout
-	mesh_root.position.y = 0.0
+	mesh_root.position.y = _mesh_root_base_y
 	mesh_root.rotation.x = 0.0
 	if is_instance_valid(npc) and npc.has_method("complete_finisher"):
 		npc.call("complete_finisher", peer_id)

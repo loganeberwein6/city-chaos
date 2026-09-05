@@ -22,6 +22,7 @@ position = Vector3(0, 1.0, 0)
 shape = SubResource("col_shape")
 
 [node name="MeshRoot" type="Node3D" parent="."]
+position = Vector3(0, 0.1, 0)
 
 [node name="BodyMesh" type="MeshInstance3D" parent="MeshRoot"]
 position = Vector3(0, 1.0, 0)

@@ -86,20 +86,20 @@ func play_punch() -> void:
 		return
 	_is_punching = true
 
-	var tw := _rua.create_tween().set_parallel(true)
-
-	# Phase 1 (0.09 s): shoulder swings forward, elbow extends into the strike,
-	#                   left arm pulls back, torso twists into the punch
+	# Phase 1 (0.09 s): shoulder swings forward, elbow extends, left arm pulls back
+	var tw := create_tween().set_parallel(true)
 	tw.tween_property(_rua,   "rotation:x", -1.15, 0.09)
 	if _rla:   tw.tween_property(_rla,   "rotation:x",  0.60, 0.09)
 	if _lua:   tw.tween_property(_lua,   "rotation:x",  0.42, 0.09)
 	if _torso: tw.tween_property(_torso, "rotation:z", -0.10, 0.09)
+	await tw.finished
 
-	# Phase 2 (0.20 s): return all
-	tw.chain().set_parallel(true)
-	tw.tween_property(_rua,   "rotation:x", 0.0, 0.20)
-	if _rla:   tw.tween_property(_rla,   "rotation:x", 0.0, 0.20)
-	if _lua:   tw.tween_property(_lua,   "rotation:x", 0.0, 0.20)
-	if _torso: tw.tween_property(_torso, "rotation:z", 0.0, 0.20)
+	# Phase 2 (0.20 s): return all joints to rest
+	var tw2 := create_tween().set_parallel(true)
+	tw2.tween_property(_rua,   "rotation:x", 0.0, 0.20)
+	if _rla:   tw2.tween_property(_rla,   "rotation:x", 0.0, 0.20)
+	if _lua:   tw2.tween_property(_lua,   "rotation:x", 0.0, 0.20)
+	if _torso: tw2.tween_property(_torso, "rotation:z", 0.0, 0.20)
+	await tw2.finished
 
-	tw.chain().tween_callback(func() -> void: _is_punching = false)
+	_is_punching = false
