@@ -378,6 +378,8 @@ func _punch() -> void:
 		var npc_health: float = best.get("health") if "health" in best else 0.0
 		if npc_health > 0.0 and npc_health <= 25.0 and best.has_method("prepare_finisher"):
 			_do_finisher(best)
+		elif best.has_method("take_punch"):
+			best.take_punch(25.0, peer_id)
 		elif best.has_method("take_damage"):
 			best.take_damage(25.0, peer_id)
 
@@ -571,7 +573,10 @@ func _finisher_kick(npc: Node3D) -> void:
 		var to_npc := npc.global_position - global_position
 		to_npc.y = 0.0
 		if to_npc.length() > 0.1:
-			_cam_yaw = atan2(to_npc.x, to_npc.z)
+			var raw_yaw := atan2(to_npc.x, to_npc.z)
+			# normalize to shortest arc from current yaw so camera doesn't spin the wrong way
+			var diff := fmod(raw_yaw - _cam_yaw + PI * 3.0, TAU) - PI
+			_cam_yaw += diff
 			create_tween().tween_property(spring_arm, "rotation:y", _cam_yaw, 0.22)
 	if rua:
 		var aim_tw := create_tween().set_parallel(true)

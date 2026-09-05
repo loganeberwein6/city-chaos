@@ -19,10 +19,12 @@ var health := max_health
 var state: State = State.IDLE
 var target: Node3D = null
 
-var _state_timer := 0.0
-var _wander_target := Vector3.ZERO
-var _rng := RandomNumberGenerator.new()
-var _staggered := false
+var _state_timer    := 0.0
+var _wander_target  := Vector3.ZERO
+var _rng            := RandomNumberGenerator.new()
+var _staggered      := false
+var _stagger_timer  := 0.0
+var _walk_t         := 0.0
 
 const GRAVITY := 20.0
 
@@ -55,50 +57,69 @@ func _npc_mi(parent: Node3D, mesh: Mesh, mat: StandardMaterial3D, pos: Vector3) 
 func _npc_build_humanoid(root: Node3D,
 		skin_m: StandardMaterial3D, shrt_m: StandardMaterial3D,
 		pant_m: StandardMaterial3D, shoe_m: StandardMaterial3D) -> void:
-	# Head + neck
+	# Static body parts
 	var head_mesh := SphereMesh.new(); head_mesh.radius = 0.115; head_mesh.height = 0.23
 	_npc_mi(root, head_mesh, skin_m, Vector3(0, 1.72, 0))
 	var neck_mesh := CylinderMesh.new(); neck_mesh.top_radius = 0.048; neck_mesh.bottom_radius = 0.048; neck_mesh.height = 0.09
 	_npc_mi(root, neck_mesh, skin_m, Vector3(0, 1.615, 0))
-	# Torso + pelvis
 	var torso_mesh := BoxMesh.new(); torso_mesh.size = Vector3(0.34, 0.46, 0.19)
 	_npc_mi(root, torso_mesh, shrt_m, Vector3(0, 1.28, 0))
 	var pelvis_mesh := BoxMesh.new(); pelvis_mesh.size = Vector3(0.30, 0.18, 0.17)
 	_npc_mi(root, pelvis_mesh, pant_m, Vector3(0, 0.88, 0))
-	# Shoulder pads
 	var sp_mesh := BoxMesh.new(); sp_mesh.size = Vector3(0.10, 0.08, 0.10)
 	_npc_mi(root, sp_mesh, shrt_m, Vector3(-0.22, 1.50, 0))
 	_npc_mi(root, sp_mesh, shrt_m, Vector3( 0.22, 1.50, 0))
-	# Arms
-	var ua_mesh := CapsuleMesh.new(); ua_mesh.radius = 0.055; ua_mesh.height = 0.26
-	_npc_mi(root, ua_mesh, shrt_m, Vector3(-0.25, 1.22, 0))
-	_npc_mi(root, ua_mesh, shrt_m, Vector3( 0.25, 1.22, 0))
-	var la_mesh := CapsuleMesh.new(); la_mesh.radius = 0.045; la_mesh.height = 0.24
-	_npc_mi(root, la_mesh, shrt_m, Vector3(-0.26, 0.94, 0))
-	_npc_mi(root, la_mesh, shrt_m, Vector3( 0.26, 0.94, 0))
-	var hand_mesh := BoxMesh.new(); hand_mesh.size = Vector3(0.07, 0.055, 0.038)
-	_npc_mi(root, hand_mesh, skin_m, Vector3(-0.26, 0.78, 0))
-	_npc_mi(root, hand_mesh, skin_m, Vector3( 0.26, 0.78, 0))
-	# Upper legs
-	var ul_mesh := CapsuleMesh.new(); ul_mesh.radius = 0.072; ul_mesh.height = 0.36
-	_npc_mi(root, ul_mesh, pant_m, Vector3(-0.10, 0.60, 0))
-	_npc_mi(root, ul_mesh, pant_m, Vector3( 0.10, 0.60, 0))
-	# Lower legs
-	var ll_mesh := CapsuleMesh.new(); ll_mesh.radius = 0.058; ll_mesh.height = 0.33
-	_npc_mi(root, ll_mesh, pant_m, Vector3(-0.10, 0.26, 0))
-	_npc_mi(root, ll_mesh, pant_m, Vector3( 0.10, 0.26, 0))
-	# Feet
-	var foot_mesh := BoxMesh.new(); foot_mesh.size = Vector3(0.09, 0.055, 0.20)
-	_npc_mi(root, foot_mesh, shoe_m, Vector3(-0.10, 0.03, 0.04))
-	_npc_mi(root, foot_mesh, shoe_m, Vector3( 0.10, 0.03, 0.04))
+
+	# ── Arm joints (NpcLUA / NpcRUA) — animated by _update_walk_anim ──────────
+	var ua_mesh   := CapsuleMesh.new(); ua_mesh.radius   = 0.055; ua_mesh.height   = 0.26
+	var la_mesh   := CapsuleMesh.new(); la_mesh.radius   = 0.045; la_mesh.height   = 0.24
+	var hand_mesh := BoxMesh.new();     hand_mesh.size   = Vector3(0.07, 0.055, 0.038)
+
+	var nlua := Node3D.new(); nlua.name = "NpcLUA"
+	nlua.position = Vector3(-0.25, 1.35, 0)
+	root.add_child(nlua)
+	_npc_mi(nlua, ua_mesh,   shrt_m, Vector3(0, -0.13, 0))
+	_npc_mi(nlua, la_mesh,   shrt_m, Vector3(0, -0.41, 0))
+	_npc_mi(nlua, hand_mesh, skin_m, Vector3(0, -0.57, 0))
+
+	var nrua := Node3D.new(); nrua.name = "NpcRUA"
+	nrua.position = Vector3(0.25, 1.35, 0)
+	root.add_child(nrua)
+	_npc_mi(nrua, ua_mesh,   shrt_m, Vector3(0, -0.13, 0))
+	_npc_mi(nrua, la_mesh,   shrt_m, Vector3(0, -0.41, 0))
+	_npc_mi(nrua, hand_mesh, skin_m, Vector3(0, -0.57, 0))
+
+	# ── Leg joints (NpcLUL / NpcRUL) — animated by _update_walk_anim ──────────
+	var ul_mesh   := CapsuleMesh.new(); ul_mesh.radius   = 0.072; ul_mesh.height   = 0.36
+	var ll_mesh   := CapsuleMesh.new(); ll_mesh.radius   = 0.058; ll_mesh.height   = 0.33
+	var foot_mesh := BoxMesh.new();     foot_mesh.size   = Vector3(0.09, 0.055, 0.20)
+
+	var nlul := Node3D.new(); nlul.name = "NpcLUL"
+	nlul.position = Vector3(-0.10, 0.79, 0)
+	root.add_child(nlul)
+	_npc_mi(nlul, ul_mesh,   pant_m, Vector3(0, -0.19, 0))
+	_npc_mi(nlul, ll_mesh,   pant_m, Vector3(0, -0.53, 0))
+	_npc_mi(nlul, foot_mesh, shoe_m, Vector3(0, -0.76, 0.04))
+
+	var nrul := Node3D.new(); nrul.name = "NpcRUL"
+	nrul.position = Vector3(0.10, 0.79, 0)
+	root.add_child(nrul)
+	_npc_mi(nrul, ul_mesh,   pant_m, Vector3(0, -0.19, 0))
+	_npc_mi(nrul, ll_mesh,   pant_m, Vector3(0, -0.53, 0))
+	_npc_mi(nrul, foot_mesh, shoe_m, Vector3(0, -0.76, 0.04))
 
 func _physics_process(delta: float) -> void:
 	if state == State.DEAD:
 		return
+	if _stagger_timer > 0.0:
+		_stagger_timer -= delta
+		if _stagger_timer <= 0.0:
+			_staggered = false
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	_tick_state(delta)
 	move_and_slide()
+	_update_walk_anim(delta)
 
 # ── State machine ─────────────────────────────────────────────────────────────
 
@@ -136,7 +157,7 @@ func _tick_flee(delta: float) -> void:
 		_enter_idle()
 		return
 	var away := global_position + (global_position - target.global_position).normalized() * 10.0
-	_move_toward(away, run_speed, delta)
+	_move_toward(away, run_speed * 0.72, delta)
 
 func _tick_chase(delta: float) -> void:
 	if target == null or not is_instance_valid(target):
@@ -160,9 +181,8 @@ func _move_toward(pos: Vector3, speed: float, delta: float) -> void:
 	dir = dir.normalized()
 	velocity.x = move_toward(velocity.x, dir.x * speed, 20.0 * delta)
 	velocity.z = move_toward(velocity.z, dir.z * speed, 20.0 * delta)
-	var look_target := global_position + dir
-	look_at(look_target, Vector3.UP)
-	rotation.x = 0.0
+	# rotate CharacterBody3D so +Z (and thus MeshRoot) faces movement direction
+	rotation.y = lerp_angle(rotation.y, atan2(dir.x, dir.z), 12.0 * delta)
 
 # ── State transitions ──────────────────────────────────────────────────────────
 
@@ -207,23 +227,31 @@ func take_damage(amount: float, attacker_id: int) -> void:
 		if health < max_health * 0.5 and not _staggered:
 			_stagger()
 
+func take_punch(amount: float, attacker_id: int) -> void:
+	if state == State.DEAD: return
+	health -= amount
+	if health <= 0.0:
+		health = 0.0
+		_die(attacker_id)
+		return
+	_stagger()  # always stagger from punch regardless of current health
+
 func _on_hurt(_attacker_id: int) -> void:
 	pass  # Override to react
 
 func _stagger() -> void:
 	_staggered = true
+	_stagger_timer = 0.65   # reset each call so consecutive punches extend stagger
 	var mr: Node3D = get_node_or_null("MeshRoot")
 	if mr:
 		var tw := create_tween()
-		tw.tween_property(mr, "rotation:z", deg_to_rad(22.0), 0.10)
+		tw.tween_property(mr, "rotation:z", deg_to_rad(22.0),  0.10)
 		tw.tween_property(mr, "rotation:z", deg_to_rad(-12.0), 0.08)
-		tw.tween_property(mr, "rotation:z", 0.0, 0.30)
-	var back := global_basis.z * 3.0
-	back.y = 0.1
+		tw.tween_property(mr, "rotation:z", 0.0,               0.30)
+	# global_basis.z now faces FORWARD (same direction as movement), so knockback is negative
+	var back := -global_basis.z * 2.5
+	back.y = 0.15
 	velocity += back
-	await get_tree().create_timer(0.55).timeout
-	if is_instance_valid(self) and state != State.DEAD:
-		_staggered = false
 
 func prepare_finisher() -> void:
 	state = State.DEAD
@@ -257,6 +285,23 @@ func _drop_loot() -> void:
 	if drop_cash_max > 0:
 		var amount := _rng.randi_range(drop_cash_min, drop_cash_max)
 		SaveData.add_cash(amount)
+
+# ── Walk animation ────────────────────────────────────────────────────────────
+
+func _update_walk_anim(delta: float) -> void:
+	var spd := Vector2(velocity.x, velocity.z).length()
+	_walk_t += delta * maxf(spd * 1.5, 0.0)
+	var mr := get_node_or_null("MeshRoot")
+	if not mr: return
+	var nlua: Node3D = mr.find_child("NpcLUA", true, false) as Node3D
+	var nrua: Node3D = mr.find_child("NpcRUA", true, false) as Node3D
+	var nlul: Node3D = mr.find_child("NpcLUL", true, false) as Node3D
+	var nrul: Node3D = mr.find_child("NpcRUL", true, false) as Node3D
+	var amp := clampf(spd * 0.060, 0.0, 0.45)
+	if nlua: nlua.rotation.x =  sin(_walk_t) * amp
+	if nrua: nrua.rotation.x = -sin(_walk_t) * amp
+	if nlul: nlul.rotation.x = -sin(_walk_t) * amp
+	if nrul: nrul.rotation.x =  sin(_walk_t) * amp
 
 # ── Awareness ──────────────────────────────────────────────────────────────────
 
