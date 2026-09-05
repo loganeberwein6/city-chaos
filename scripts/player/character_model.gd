@@ -53,35 +53,63 @@ static func _build_humanoid(
 
 	var s := scale
 
-	# Head
-	_mi(root, _sphere(0.115 * s),                         skin,  Vector3(0,        1.72 * s, 0))
-	# Neck
-	_mi(root, _cylinder(0.048 * s, 0.09 * s),             skin,  Vector3(0,        1.615 * s, 0))
-	# Torso (named for idle-breath animation)
-	_mi(root, _box(0.34 * s, 0.46 * s, 0.19 * s),         shirt, Vector3(0,        1.28 * s, 0)).name = "Torso"
-	# Pelvis
-	_mi(root, _box(0.30 * s, 0.18 * s, 0.17 * s),         pants, Vector3(0,        0.88 * s, 0))
-	# Shoulder pads
-	_mi(root, _box(0.10 * s, 0.08 * s, 0.10 * s),         shirt, Vector3(-0.22 * s, 1.50 * s, 0))
-	_mi(root, _box(0.10 * s, 0.08 * s, 0.10 * s),         shirt, Vector3( 0.22 * s, 1.50 * s, 0))
-	# Upper arms (named for walk & punch animation)
-	_mi(root, _capsule(0.055 * s, 0.26 * s),              shirt, Vector3(-0.25 * s, 1.22 * s, 0)).name = "LUA"
-	_mi(root, _capsule(0.055 * s, 0.26 * s),              shirt, Vector3( 0.25 * s, 1.22 * s, 0)).name = "RUA"
-	# Lower arms (named for punch extension)
-	_mi(root, _capsule(0.045 * s, 0.24 * s),              shirt, Vector3(-0.26 * s, 0.94 * s, 0)).name = "LLA"
-	_mi(root, _capsule(0.045 * s, 0.24 * s),              shirt, Vector3( 0.26 * s, 0.94 * s, 0)).name = "RLA"
-	# Hands (named for punch extension)
-	_mi(root, _box(0.07 * s, 0.055 * s, 0.038 * s),       skin,  Vector3(-0.26 * s, 0.78 * s, 0)).name = "LHand"
-	_mi(root, _box(0.07 * s, 0.055 * s, 0.038 * s),       skin,  Vector3( 0.26 * s, 0.78 * s, 0)).name = "RHand"
-	# Upper legs (named for walk animation)
-	_mi(root, _capsule(0.072 * s, 0.36 * s),              pants, Vector3(-0.10 * s, 0.60 * s, 0)).name = "LUL"
-	_mi(root, _capsule(0.072 * s, 0.36 * s),              pants, Vector3( 0.10 * s, 0.60 * s, 0)).name = "RUL"
-	# Lower legs
-	_mi(root, _capsule(0.058 * s, 0.33 * s),              pants, Vector3(-0.10 * s, 0.26 * s, 0)).name = "LLL"
-	_mi(root, _capsule(0.058 * s, 0.33 * s),              pants, Vector3( 0.10 * s, 0.26 * s, 0)).name = "RLL"
-	# Feet
-	_mi(root, _box(0.09 * s, 0.055 * s, 0.20 * s),        shoe,  Vector3(-0.10 * s, 0.03 * s, 0.04 * s))
-	_mi(root, _box(0.09 * s, 0.055 * s, 0.20 * s),        shoe,  Vector3( 0.10 * s, 0.03 * s, 0.04 * s))
+	# Static body parts
+	_mi(root, _sphere(0.115 * s),               skin,  Vector3(0,        1.72 * s,  0))  # Head
+	_mi(root, _cylinder(0.048 * s, 0.09 * s),   skin,  Vector3(0,        1.615 * s, 0))  # Neck
+	_mi(root, _box(0.34*s, 0.46*s, 0.19*s),     shirt, Vector3(0,        1.28 * s,  0)).name = "Torso"
+	_mi(root, _box(0.30*s, 0.18*s, 0.17*s),     pants, Vector3(0,        0.88 * s,  0))  # Pelvis
+	_mi(root, _box(0.10*s, 0.08*s, 0.10*s),     shirt, Vector3(-0.22*s,  1.42 * s,  0))  # L shoulder pad
+	_mi(root, _box(0.10*s, 0.08*s, 0.10*s),     shirt, Vector3( 0.22*s,  1.42 * s,  0))  # R shoulder pad
+
+	# ── Left arm chain: LUA (shoulder) → LLA (elbow) → LHand (wrist) ──────────
+	var lua := Node3D.new(); lua.name = "LUA"
+	lua.position = Vector3(-0.25 * s, 1.35 * s, 0)
+	root.add_child(lua)
+	_mi(lua, _capsule(0.055 * s, 0.26 * s), shirt, Vector3(0, -0.13 * s, 0))
+	var lla := Node3D.new(); lla.name = "LLA"
+	lla.position = Vector3(0, -0.26 * s, 0)
+	lua.add_child(lla)
+	_mi(lla, _capsule(0.045 * s, 0.24 * s), shirt, Vector3(0, -0.12 * s, 0))
+	var lhand := Node3D.new(); lhand.name = "LHand"
+	lhand.position = Vector3(0, -0.24 * s, 0)
+	lla.add_child(lhand)
+	_mi(lhand, _box(0.07 * s, 0.055 * s, 0.038 * s), skin, Vector3(0, -0.028 * s, 0))
+
+	# ── Right arm chain: RUA (shoulder) → RLA (elbow) → RHand (wrist) ─────────
+	var rua := Node3D.new(); rua.name = "RUA"
+	rua.position = Vector3(0.25 * s, 1.35 * s, 0)
+	root.add_child(rua)
+	_mi(rua, _capsule(0.055 * s, 0.26 * s), shirt, Vector3(0, -0.13 * s, 0))
+	var rla := Node3D.new(); rla.name = "RLA"
+	rla.position = Vector3(0, -0.26 * s, 0)
+	rua.add_child(rla)
+	_mi(rla, _capsule(0.045 * s, 0.24 * s), shirt, Vector3(0, -0.12 * s, 0))
+	var rhand := Node3D.new(); rhand.name = "RHand"
+	rhand.position = Vector3(0, -0.24 * s, 0)
+	rla.add_child(rhand)
+	_mi(rhand, _box(0.07 * s, 0.055 * s, 0.038 * s), skin, Vector3(0, -0.028 * s, 0))
+
+	# ── Left leg chain: LUL (hip) → LLL (knee, with foot attached) ─────────────
+	var lul := Node3D.new(); lul.name = "LUL"
+	lul.position = Vector3(-0.10 * s, 0.79 * s, 0)
+	root.add_child(lul)
+	_mi(lul, _capsule(0.072 * s, 0.36 * s), pants, Vector3(0, -0.18 * s, 0))
+	var lll := Node3D.new(); lll.name = "LLL"
+	lll.position = Vector3(0, -0.36 * s, 0)
+	lul.add_child(lll)
+	_mi(lll, _capsule(0.058 * s, 0.33 * s), pants, Vector3(0, -0.165 * s, 0))
+	_mi(lll, _box(0.09 * s, 0.055 * s, 0.20 * s), shoe, Vector3(0, -0.36 * s, 0.04 * s))
+
+	# ── Right leg chain: RUL (hip) → RLL (knee, with foot attached) ────────────
+	var rul := Node3D.new(); rul.name = "RUL"
+	rul.position = Vector3(0.10 * s, 0.79 * s, 0)
+	root.add_child(rul)
+	_mi(rul, _capsule(0.072 * s, 0.36 * s), pants, Vector3(0, -0.18 * s, 0))
+	var rll := Node3D.new(); rll.name = "RLL"
+	rll.position = Vector3(0, -0.36 * s, 0)
+	rul.add_child(rll)
+	_mi(rll, _capsule(0.058 * s, 0.33 * s), pants, Vector3(0, -0.165 * s, 0))
+	_mi(rll, _box(0.09 * s, 0.055 * s, 0.20 * s), shoe, Vector3(0, -0.36 * s, 0.04 * s))
 
 	accessory_fn.call(root)
 

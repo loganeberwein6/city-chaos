@@ -522,8 +522,8 @@ func _do_finisher(npc: Node3D) -> void:
 
 func _finisher_kick(npc: Node3D) -> void:
 	var npc_mr: Node3D = npc.get_node_or_null("MeshRoot")
-	var rul: Node3D = mesh_root.get_node_or_null("RUL")
-	var rll: Node3D = mesh_root.get_node_or_null("RLL")
+	var rul: Node3D = mesh_root.find_child("RUL", true, false)
+	var rll: Node3D = mesh_root.find_child("RLL", true, false)
 	var kick_dir := (npc.global_position - global_position)
 	kick_dir.y = 0.3
 	kick_dir = kick_dir.normalized()
@@ -551,9 +551,9 @@ func _finisher_kick(npc: Node3D) -> void:
 
 func _finisher_uppercut(npc: Node3D) -> void:
 	var npc_mr: Node3D = npc.get_node_or_null("MeshRoot")
-	var rua: Node3D = mesh_root.get_node_or_null("RUA")
-	var rla: Node3D = mesh_root.get_node_or_null("RLA")
-	var lua: Node3D = mesh_root.get_node_or_null("LUA")
+	var rua: Node3D = mesh_root.find_child("RUA", true, false)
+	var rla: Node3D = mesh_root.find_child("RLA", true, false)
+	var lua: Node3D = mesh_root.find_child("LUA", true, false)
 	var npc_start_y: float = npc.global_position.y
 	var swing_tw := create_tween().set_parallel(true)
 	if rua: swing_tw.tween_property(rua, "rotation:x", -1.65, 0.14)
@@ -587,8 +587,8 @@ func _finisher_uppercut(npc: Node3D) -> void:
 
 func _finisher_wwe(npc: Node3D) -> void:
 	var npc_mr: Node3D = npc.get_node_or_null("MeshRoot")
-	var rua: Node3D = mesh_root.get_node_or_null("RUA")
-	var lua: Node3D = mesh_root.get_node_or_null("LUA")
+	var rua: Node3D = mesh_root.find_child("RUA", true, false)
+	var lua: Node3D = mesh_root.find_child("LUA", true, false)
 	var rush_tw := create_tween().set_parallel(true)
 	rush_tw.tween_property(mesh_root, "rotation:x", deg_to_rad(-40.0), 0.22)
 	if rua: rush_tw.tween_property(rua, "rotation:x", 0.60, 0.22)
@@ -619,7 +619,7 @@ func _finisher_wwe(npc: Node3D) -> void:
 		npc.call("complete_finisher", peer_id)
 
 func _finisher_shoot_cosmetic() -> void:
-	var rhand: Node3D = mesh_root.get_node_or_null("RHand")
+	var rhand: Node3D = mesh_root.find_child("RHand", true, false)
 	if not rhand: return
 	var flash := MeshInstance3D.new()
 	var sm := SphereMesh.new()
@@ -640,7 +640,7 @@ func _finisher_shoot_cosmetic() -> void:
 	if is_instance_valid(flash): flash.queue_free()
 
 func _spawn_knife_mesh() -> MeshInstance3D:
-	var rhand: Node3D = mesh_root.get_node_or_null("RHand")
+	var rhand: Node3D = mesh_root.find_child("RHand", true, false)
 	var knife := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = Vector3(0.035, 0.22, 0.018)

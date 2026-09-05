@@ -2,24 +2,20 @@ extends Node
 
 var _mesh_root: Node3D
 
-# Limb node refs (found by name after model is built)
-var _rua: Node3D    # right upper arm
-var _lua: Node3D    # left upper arm
-var _rla: Node3D    # right lower arm
-var _lla: Node3D    # left lower arm
-var _rhand: Node3D  # right hand
-var _rul: Node3D    # right upper leg
-var _lul: Node3D    # left upper leg
-var _rll: Node3D    # right lower leg
-var _lll: Node3D    # left lower leg
+# Joint node refs (shoulder/elbow/wrist/hip/knee — found by name after model build)
+var _rua: Node3D    # right shoulder joint
+var _lua: Node3D    # left shoulder joint
+var _rla: Node3D    # right elbow joint  (child of RUA)
+var _lla: Node3D    # left elbow joint   (child of LUA)
+var _rhand: Node3D  # right wrist joint  (child of RLA)
+var _rul: Node3D    # right hip joint
+var _lul: Node3D    # left hip joint
+var _rll: Node3D    # right knee joint   (child of RUL)
+var _lll: Node3D    # left knee joint    (child of LUL)
 var _torso: Node3D
 
-# Rest positions for punch reset
-var _rla_rest_pos := Vector3.ZERO
-var _rhand_rest_pos := Vector3.ZERO
-
-var _anim_t     := 0.0
-var _speed      := 0.0
+var _anim_t      := 0.0
+var _speed       := 0.0
 var _is_punching := false
 
 func setup(mesh_root: Node3D) -> void:
@@ -29,19 +25,17 @@ func setup(mesh_root: Node3D) -> void:
 func _refresh() -> void:
 	if not _mesh_root:
 		return
-	_rua   = _mesh_root.get_node_or_null("RUA")
-	_lua   = _mesh_root.get_node_or_null("LUA")
-	_rla   = _mesh_root.get_node_or_null("RLA")
-	_lla   = _mesh_root.get_node_or_null("LLA")
-	_rhand = _mesh_root.get_node_or_null("RHand")
-	_rul   = _mesh_root.get_node_or_null("RUL")
-	_lul   = _mesh_root.get_node_or_null("LUL")
-	_rll   = _mesh_root.get_node_or_null("RLL")
-	_lll   = _mesh_root.get_node_or_null("LLL")
-	_torso = _mesh_root.get_node_or_null("Torso")
-	# Cache rest positions so punch can return to them
-	if _rla:   _rla_rest_pos   = _rla.position
-	if _rhand: _rhand_rest_pos = _rhand.position
+	# find_child searches recursively so it works regardless of hierarchy depth
+	_rua   = _mesh_root.find_child("RUA",   true, false) as Node3D
+	_lua   = _mesh_root.find_child("LUA",   true, false) as Node3D
+	_rla   = _mesh_root.find_child("RLA",   true, false) as Node3D
+	_lla   = _mesh_root.find_child("LLA",   true, false) as Node3D
+	_rhand = _mesh_root.find_child("RHand", true, false) as Node3D
+	_rul   = _mesh_root.find_child("RUL",   true, false) as Node3D
+	_lul   = _mesh_root.find_child("LUL",   true, false) as Node3D
+	_rll   = _mesh_root.find_child("RLL",   true, false) as Node3D
+	_lll   = _mesh_root.find_child("LLL",   true, false) as Node3D
+	_torso = _mesh_root.find_child("Torso", true, false) as Node3D
 
 func set_speed(speed: float) -> void:
 	_speed = speed
@@ -49,57 +43,60 @@ func set_speed(speed: float) -> void:
 func _process(delta: float) -> void:
 	if not _mesh_root:
 		return
-	if not _rua:
+	if not _rul:
 		_refresh()
 		return
 
-	# Tick the animation clock — always runs so idle breath plays even while still
 	_anim_t += delta * maxf(_speed * 1.5, 0.9)
-	var t    := _anim_t
-	var spd  := _speed
+	var t   := _anim_t
+	var spd := _speed
 
-	# Amplitude scales with movement speed (zero at idle = very small oscillation)
-	var arm_amp := clampf(spd * 0.055, 0.04, 0.50)
-	var leg_amp := clampf(spd * 0.050, 0.04, 0.45)
+	# Scale amplitude with speed; small idle sway so the model never looks frozen
+	var arm_amp := clampf(spd * 0.055, 0.03, 0.50)
+	var leg_amp := clampf(spd * 0.060, 0.03, 0.48)
 
-	# Right leg forward → left arm forward (opposite sides in phase)
-	# rotation.x negative = forward swing for a Y-axis capsule
+	# Hip joints swing the whole leg chain (upper + lower + foot follow automatically)
+	# rotation.x negative = leg swings forward (+Z) for model facing +Z
 	if _rul: _rul.rotation.x = -sin(t) * leg_amp
 	if _lul: _lul.rotation.x =  sin(t) * leg_amp
-	if _rll: _rll.rotation.x = maxf(-sin(t), 0.0) * leg_amp * 0.5
-	if _lll: _lll.rotation.x = maxf( sin(t), 0.0) * leg_amp * 0.5
-	if _lua: _lua.rotation.x = -sin(t) * arm_amp
-	if _lla: _lla.rotation.x = -sin(t) * arm_amp * 0.4
 
-	# Right arm only when not mid-punch
+	# Knee joints add a heel-lift bend on the push-off (rear) phase
+	if _rll: _rll.rotation.x = maxf(-sin(t), 0.0) * leg_amp * 0.65
+	if _lll: _lll.rotation.x = maxf( sin(t), 0.0) * leg_amp * 0.65
+
+	# Shoulder joints swing arms opposite to legs
+	if _lua: _lua.rotation.x = -sin(t) * arm_amp
 	if not _is_punching:
 		if _rua: _rua.rotation.x =  sin(t) * arm_amp
 
-	# Gentle idle torso breath
+	# Gentle elbow sway for the non-punching arm
+	if _lla: _lla.rotation.x = maxf(sin(t), 0.0) * arm_amp * 0.30
+	if not _is_punching:
+		if _rla: _rla.rotation.x = maxf(-sin(t), 0.0) * arm_amp * 0.30
+
+	# Torso idle breath
 	if _torso:
 		_torso.position.y = 1.28 + sin(t * 0.4) * 0.006
 
 func play_punch() -> void:
-	if _is_punching or not _rua or not _rla or not _rhand:
+	if _is_punching or not _rua:
 		return
 	_is_punching = true
 
-	var tween := _rua.create_tween()
-	tween.set_parallel(true)
+	var tw := _rua.create_tween().set_parallel(true)
 
-	# Phase 1: 0.09 s — right arm forward, left arm pulls back, torso twists
-	tween.tween_property(_rua,   "rotation:x",  -1.15, 0.09)
-	tween.tween_property(_rla,   "position:z",   _rla_rest_pos.z   - 0.28, 0.09)
-	tween.tween_property(_rhand, "position:z",   _rhand_rest_pos.z - 0.28, 0.09)
-	if _lua:   tween.tween_property(_lua,   "rotation:x",  0.42, 0.09)
-	if _torso: tween.tween_property(_torso, "rotation:z", -0.10, 0.09)
+	# Phase 1 (0.09 s): shoulder swings forward, elbow extends into the strike,
+	#                   left arm pulls back, torso twists into the punch
+	tw.tween_property(_rua,   "rotation:x", -1.15, 0.09)
+	if _rla:   tw.tween_property(_rla,   "rotation:x",  0.60, 0.09)
+	if _lua:   tw.tween_property(_lua,   "rotation:x",  0.42, 0.09)
+	if _torso: tw.tween_property(_torso, "rotation:z", -0.10, 0.09)
 
-	# Phase 2: 0.20 s — return all
-	tween.chain().set_parallel(true)
-	tween.tween_property(_rua,   "rotation:x",   0.0,               0.20)
-	tween.tween_property(_rla,   "position:z",   _rla_rest_pos.z,   0.20)
-	tween.tween_property(_rhand, "position:z",   _rhand_rest_pos.z, 0.20)
-	if _lua:   tween.tween_property(_lua,   "rotation:x",  0.0,  0.20)
-	if _torso: tween.tween_property(_torso, "rotation:z",  0.0,  0.20)
+	# Phase 2 (0.20 s): return all
+	tw.chain().set_parallel(true)
+	tw.tween_property(_rua,   "rotation:x", 0.0, 0.20)
+	if _rla:   tw.tween_property(_rla,   "rotation:x", 0.0, 0.20)
+	if _lua:   tw.tween_property(_lua,   "rotation:x", 0.0, 0.20)
+	if _torso: tw.tween_property(_torso, "rotation:z", 0.0, 0.20)
 
-	tween.chain().tween_callback(func() -> void: _is_punching = false)
+	tw.chain().tween_callback(func() -> void: _is_punching = false)
