@@ -11,7 +11,7 @@ signal game_starting()
 
 const GAME_PORT    := 7777
 const BEACON_PORT  := 7778
-const BEACON_INTERVAL := 2.0
+const BEACON_INTERVAL := 1.0
 
 var is_hosting := false
 var _game_started := false
@@ -51,8 +51,12 @@ func host(name: String) -> bool:
 
 func _start_beacon() -> void:
 	_beacon_socket = PacketPeerUDP.new()
-	_beacon_socket.bind(0)
+	var err := _beacon_socket.bind(0)
+	if err != OK:
+		push_error("Beacon socket bind failed: %s" % error_string(err))
+		return
 	_beacon_socket.set_broadcast_enabled(true)
+	_beacon_timer = BEACON_INTERVAL  # fire on the very next _process tick
 
 func _stop_beacon() -> void:
 	if _beacon_socket:
@@ -67,16 +71,25 @@ func _broadcast_beacon() -> void:
 		"players": connected_players.size(),
 		"port": GAME_PORT,
 	})
+	var packet := info.to_utf8_buffer()
+	# Subnet broadcast (works across different machines on the LAN)
 	_beacon_socket.set_dest_address("255.255.255.255", BEACON_PORT)
-	_beacon_socket.put_packet(info.to_utf8_buffer())
+	_beacon_socket.put_packet(packet)
+	# Loopback — required for same-machine host+client (Windows doesn't loop broadcast back)
+	_beacon_socket.set_dest_address("127.0.0.1", BEACON_PORT)
+	_beacon_socket.put_packet(packet)
 
 # ── Discovery ─────────────────────────────────────────────────────────────────
 
 func start_discovery() -> void:
 	discovered_servers.clear()
 	server_list_cleared.emit()
+	if _listen_socket:
+		_listen_socket.close()
 	_listen_socket = PacketPeerUDP.new()
-	_listen_socket.bind(BEACON_PORT)
+	var err := _listen_socket.bind(BEACON_PORT)
+	if err != OK:
+		push_error("Discovery listen bind failed on port %d: %s" % [BEACON_PORT, error_string(err)])
 
 func stop_discovery() -> void:
 	if _listen_socket:
