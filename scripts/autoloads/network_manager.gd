@@ -14,6 +14,7 @@ const BEACON_PORT  := 7778
 const BEACON_INTERVAL := 2.0
 
 var is_hosting := false
+var _game_started := false
 var session_name := "Game"
 var connected_players: Dictionary = {}  # peer_id -> player data
 var discovered_servers: Dictionary = {}  # ip -> info
@@ -113,6 +114,7 @@ func disconnect_from_session() -> void:
 	stop_discovery()
 	multiplayer.multiplayer_peer = null
 	is_hosting = false
+	_game_started = false
 	connected_players.clear()
 	discovered_servers.clear()
 
@@ -144,8 +146,10 @@ func _receive_registration(data: Dictionary) -> void:
 		peer_id = 1
 	data["peer_id"] = peer_id
 	connected_players[peer_id] = data
-	# Broadcast updated list to everyone
 	_sync_player_list.rpc(connected_players)
+	# If game is already running, immediately send this late joiner into it
+	if _game_started and peer_id != 1:
+		_rpc_start_game.rpc_id(peer_id)
 
 @rpc("authority", "reliable", "call_local")
 func _sync_player_list(all_players: Dictionary) -> void:
@@ -182,6 +186,7 @@ func _on_server_disconnected() -> void:
 func start_game_for_all() -> void:
 	if not multiplayer.is_server():
 		return
+	_game_started = true
 	_rpc_start_game.rpc()
 
 @rpc("authority", "reliable", "call_local")

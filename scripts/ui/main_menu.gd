@@ -2,10 +2,8 @@ extends Control
 
 var _discovered: Array[Dictionary] = []
 var _pending_hero := "normal_person"
+var _pending_player_name := ""
 var _pending_host_data := {}
-var _waiting_screen: Control = null
-var _host_lobby_screen: Control = null
-var _host_players_list: Label = null
 
 const _SAVE_PATH := "user://player_config.cfg"
 
@@ -25,15 +23,11 @@ func _ready() -> void:
 		cheats_opt.select(0)
 
 	_load_name()
-	_build_waiting_screen()
-	_build_host_lobby_screen()
 
 	NetworkManager.server_found.connect(_on_server_found)
 	NetworkManager.connected_to_host.connect(_on_connected)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 	NetworkManager.game_starting.connect(_on_game_starting)
-	NetworkManager.player_joined.connect(_refresh_host_players)
-	NetworkManager.player_left.connect(_refresh_host_players)
 
 	_show("Main")
 
@@ -44,6 +38,7 @@ func _load_name() -> void:
 	var saved: String = cfg.get_value("player", "name", "")
 	if saved != "":
 		($LobbyScreen/VBox/NameInput as LineEdit).text = saved
+		($JoinScreen/VBox/NameInput as LineEdit).text = saved
 
 func _save_name(pname: String) -> void:
 	var cfg := ConfigFile.new()
@@ -57,79 +52,8 @@ func _show(screen: String) -> void:
 	$JoinScreen.visible    = (screen == "Join")
 	$LobbyScreen.visible   = (screen == "Lobby")
 	$OptionsScreen.visible = (screen == "Options")
-	if _waiting_screen:
-		_waiting_screen.visible    = (screen == "Waiting")
-	if _host_lobby_screen:
-		_host_lobby_screen.visible = (screen == "HostLobby")
 
-func _build_waiting_screen() -> void:
-	_waiting_screen = Control.new()
-	_waiting_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_waiting_screen.hide()
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(420, 180)
-	_waiting_screen.add_child(panel)
-	var vbox := VBoxContainer.new()
-	panel.add_child(vbox)
-	var title := Label.new()
-	title.text = "Connected!"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
-	vbox.add_child(title)
-	var lbl := Label.new()
-	lbl.text = "Waiting for host to start the game..."
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(lbl)
-	add_child(_waiting_screen)
-
-func _build_host_lobby_screen() -> void:
-	_host_lobby_screen = Control.new()
-	_host_lobby_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_host_lobby_screen.hide()
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(420, 300)
-	_host_lobby_screen.add_child(panel)
-	var vbox := VBoxContainer.new()
-	panel.add_child(vbox)
-	var title := Label.new()
-	title.text = "HOST LOBBY — Waiting for players"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 18)
-	vbox.add_child(title)
-	var hint := Label.new()
-	hint.text = "(Players discover your server automatically via LAN)"
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 11)
-	vbox.add_child(hint)
-	_host_players_list = Label.new()
-	_host_players_list.text = "Players: 0"
-	_host_players_list.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(_host_players_list)
-	var launch_btn := Button.new()
-	launch_btn.text = "Launch Game"
-	launch_btn.pressed.connect(_on_launch_pressed)
-	vbox.add_child(launch_btn)
-	var cancel_btn := Button.new()
-	cancel_btn.text = "Cancel"
-	cancel_btn.pressed.connect(func():
-		NetworkManager.disconnect_from_session()
-		_show("Main")
-	)
-	vbox.add_child(cancel_btn)
-	add_child(_host_lobby_screen)
-
-func _refresh_host_players(_a = null, _b = null) -> void:
-	if not _host_players_list:
-		return
-	var lines := ""
-	for pid in NetworkManager.connected_players:
-		var data: Dictionary = NetworkManager.connected_players[pid]
-		lines += "  %s\n" % data.get("name", "P%d" % pid)
-	_host_players_list.text = "Players (%d):\n%s" % [NetworkManager.connected_players.size(), lines]
-
-# ── Button handlers (connected via scene [connection] entries) ──────────────
+# ── Button handlers ─────────────────────────────────────────────────────────
 
 func _on_host_pressed() -> void:
 	_show("Lobby")
@@ -137,6 +61,7 @@ func _on_host_pressed() -> void:
 func _on_join_pressed() -> void:
 	_show("Join")
 	($JoinScreen/VBox/ServerList as ItemList).clear()
+	($JoinScreen/VBox/StatusLabel as Label).text = "Searching for servers on LAN..."
 	_discovered.clear()
 	NetworkManager.start_discovery()
 
@@ -149,18 +74,19 @@ func _on_quit_pressed() -> void:
 func _on_connect_pressed() -> void:
 	var list := $JoinScreen/VBox/ServerList as ItemList
 	var sel  := list.get_selected_items()
-	var ip   := ""
-	var port := 7777
-	if sel.size() > 0:
-		var info: Dictionary = _discovered[sel[0]]
-		ip   = info["ip"]
-		port = info.get("port", 7777)
-	else:
-		ip   = ($JoinScreen/VBox/HBox/IPInput as LineEdit).text.strip_edges()
-		port = ($JoinScreen/VBox/HBox/PortInput as LineEdit).text.to_int()
-		if port <= 0: port = 7777
-	if ip == "": return
-	_pending_host_data = {"ip": ip, "port": port}
+	if sel.size() == 0:
+		return
+	_do_join(_discovered[sel[0]])
+
+func _on_server_list_item_activated(index: int) -> void:
+	if index < _discovered.size():
+		_do_join(_discovered[index])
+
+func _do_join(info: Dictionary) -> void:
+	_pending_player_name = ($JoinScreen/VBox/NameInput as LineEdit).text.strip_edges()
+	if _pending_player_name == "": _pending_player_name = "Player"
+	_save_name(_pending_player_name)
+	_pending_host_data = {"ip": info["ip"], "port": info.get("port", 7777)}
 	_show_character_select(false)
 
 func _on_join_cancel_pressed() -> void:
@@ -198,30 +124,25 @@ func _show_character_select(is_hosting: bool) -> void:
 			if NetworkManager.host(pname):
 				_save_name(pname)
 				NetworkManager.register_self(pname, hero)
-				_refresh_host_players()
-				_show("HostLobby")
+				NetworkManager.start_game_for_all()
+				# game_starting signal (call_local via RPC) handles the scene change
 			else:
 				printerr("Failed to host")
 		else:
 			NetworkManager.join(_pending_host_data["ip"], _pending_host_data.get("port", 7777))
 	)
 
-# ── Network callbacks ───────────────────────────────────────────────────────
+# ── Network callbacks ────────────────────────────────────────────────────────
 
 func _on_server_found(info: Dictionary) -> void:
 	_discovered.append(info)
 	var list := $JoinScreen/VBox/ServerList as ItemList
-	list.add_item("[%s] %d players — %s" % [info.get("name","?"), info.get("players",0), info.get("ip","?")])
+	list.add_item("%s  (%d players)" % [info.get("name", "Server"), info.get("players", 0)])
+	($JoinScreen/VBox/StatusLabel as Label).text = "Found %d server(s) — click to join" % _discovered.size()
 
 func _on_connected() -> void:
-	var pname := ($LobbyScreen/VBox/NameInput as LineEdit).text.strip_edges()
-	if pname == "": pname = "Player"
-	_save_name(pname)
-	NetworkManager.register_self(pname, _pending_hero)
-	_show("Waiting")
-
-func _on_launch_pressed() -> void:
-	NetworkManager.start_game_for_all()
+	NetworkManager.register_self(_pending_player_name, _pending_hero)
+	# Server sends game_starting RPC back immediately (via _receive_registration late-join path)
 
 func _on_game_starting() -> void:
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
