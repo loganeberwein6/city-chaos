@@ -89,6 +89,12 @@ func _do_join(info: Dictionary) -> void:
 	_pending_host_data = {"ip": info["ip"], "port": info.get("port", 7777)}
 	_show_character_select(false)
 
+func _on_manual_connect_pressed() -> void:
+	var ip := ($JoinScreen/VBox/ManualHBox/ManualIP as LineEdit).text.strip_edges()
+	if ip == "":
+		return
+	_do_join({"ip": ip, "port": NetworkManager.GAME_PORT})
+
 func _on_join_cancel_pressed() -> void:
 	NetworkManager.stop_discovery()
 	_show("Main")

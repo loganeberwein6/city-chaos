@@ -72,12 +72,25 @@ func _broadcast_beacon() -> void:
 		"port": GAME_PORT,
 	})
 	var packet := info.to_utf8_buffer()
-	# Subnet broadcast (works across different machines on the LAN)
-	_beacon_socket.set_dest_address("255.255.255.255", BEACON_PORT)
-	_beacon_socket.put_packet(packet)
-	# Loopback — required for same-machine host+client (Windows doesn't loop broadcast back)
-	_beacon_socket.set_dest_address("127.0.0.1", BEACON_PORT)
-	_beacon_socket.put_packet(packet)
+	for addr in _beacon_targets():
+		_beacon_socket.set_dest_address(addr, BEACON_PORT)
+		_beacon_socket.put_packet(packet)
+
+func _beacon_targets() -> Array:
+	# Build a list of addresses to broadcast to.
+	# 255.255.255.255 is blocked by many routers; compute real subnet broadcasts too.
+	var targets: Array = ["255.255.255.255", "127.0.0.1"]
+	for addr: String in IP.get_local_addresses():
+		if addr.contains(":"):  # skip IPv6
+			continue
+		var parts := addr.split(".")
+		if parts.size() != 4:
+			continue
+		# /24 subnet broadcast — e.g. 192.168.1.x → 192.168.1.255
+		var bcast := "%s.%s.%s.255" % [parts[0], parts[1], parts[2]]
+		if bcast not in targets:
+			targets.append(bcast)
+	return targets
 
 # ── Discovery ─────────────────────────────────────────────────────────────────
 

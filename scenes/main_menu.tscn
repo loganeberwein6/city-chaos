@@ -127,11 +127,28 @@ theme_override_font_sizes/font_size = 11
 
 [node name="ServerList" type="ItemList" parent="JoinScreen/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 160)
+custom_minimum_size = Vector2(0, 140)
 
 [node name="BtnConnect" type="Button" parent="JoinScreen/VBox"]
 layout_mode = 2
 text = "Join Selected"
+
+[node name="ManualLabel" type="Label" parent="JoinScreen/VBox"]
+layout_mode = 2
+text = "Or enter host IP directly:"
+theme_override_font_sizes/font_size = 11
+
+[node name="ManualHBox" type="HBoxContainer" parent="JoinScreen/VBox"]
+layout_mode = 2
+
+[node name="ManualIP" type="LineEdit" parent="JoinScreen/VBox/ManualHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "192.168.x.x"
+
+[node name="BtnManual" type="Button" parent="JoinScreen/VBox/ManualHBox"]
+layout_mode = 2
+text = "Connect"
 
 [node name="BtnCancel" type="Button" parent="JoinScreen/VBox"]
 layout_mode = 2
@@ -259,6 +276,7 @@ text = "Back"
 [connection signal="pressed" from="MainScreen/MainPanel/BtnQuit" to="." method="_on_quit_pressed"]
 [connection signal="item_activated" from="JoinScreen/VBox/ServerList" to="." method="_on_server_list_item_activated"]
 [connection signal="pressed" from="JoinScreen/VBox/BtnConnect" to="." method="_on_connect_pressed"]
+[connection signal="pressed" from="JoinScreen/VBox/ManualHBox/BtnManual" to="." method="_on_manual_connect_pressed"]
 [connection signal="pressed" from="JoinScreen/VBox/BtnCancel" to="." method="_on_join_cancel_pressed"]
 [connection signal="pressed" from="LobbyScreen/VBox/BtnStart" to="." method="_on_start_pressed"]
 [connection signal="pressed" from="LobbyScreen/VBox/BtnCancel" to="." method="_on_lobby_cancel_pressed"]
