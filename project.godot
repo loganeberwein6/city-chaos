@@ -23,6 +23,7 @@ PoliceSpawner="*res://scripts/autoloads/police_spawner.gd"
 AudioManager="*res://scripts/autoloads/audio_manager.gd"
 DayNightCycle="*res://scripts/autoloads/day_night_cycle.gd"
 WeaponPickupSpawner="*res://scripts/autoloads/weapon_pickup_spawner.gd"
+Matchmaker="*res://scripts/autoloads/matchmaker.gd"
 
 [display]
 

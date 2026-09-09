@@ -19,6 +19,9 @@ var session_name := "Game"
 var connected_players: Dictionary = {}  # peer_id -> player data
 var discovered_servers: Dictionary = {}  # ip -> info
 
+var matchmaker_url := ""  # e.g. "http://73.x.x.x:7779" — empty = LAN only
+var _matchmaker_timer := 0.0
+
 var _beacon_socket: PacketPeerUDP
 var _listen_socket: PacketPeerUDP
 var _beacon_timer: float = 0.0
@@ -29,6 +32,17 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	_load_network_config()
+
+func _load_network_config() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load("user://network.cfg") == OK:
+		matchmaker_url = cfg.get_value("network", "matchmaker_url", "")
+
+func save_network_config() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("network", "matchmaker_url", matchmaker_url)
+	cfg.save("user://network.cfg")
 
 # ── Hosting ──────────────────────────────────────────────────────────────────
 
@@ -141,6 +155,7 @@ func disconnect_from_session() -> void:
 	multiplayer.multiplayer_peer = null
 	is_hosting = false
 	_game_started = false
+	_matchmaker_timer = 0.0
 	connected_players.clear()
 	discovered_servers.clear()
 
@@ -152,7 +167,51 @@ func _process(delta: float) -> void:
 		if _beacon_timer >= BEACON_INTERVAL:
 			_beacon_timer = 0.0
 			_broadcast_beacon()
+		if matchmaker_url != "":
+			_matchmaker_timer += delta
+			if _matchmaker_timer >= 5.0:
+				_matchmaker_timer = 0.0
+				_post_to_matchmaker()
 	_poll_discovery()
+
+# ── Matchmaker HTTP ───────────────────────────────────────────────────────────
+
+func _post_to_matchmaker() -> void:
+	var body := JSON.stringify({
+		"name": session_name,
+		"port": GAME_PORT,
+		"players": connected_players.size(),
+	})
+	var req := HTTPRequest.new()
+	add_child(req)
+	req.request_completed.connect(func(_r: int, _c: int, _h: PackedStringArray, _b: PackedByteArray) -> void:
+		req.queue_free()
+	)
+	if req.request(matchmaker_url + "/register",
+			["Content-Type: application/json"],
+			HTTPClient.METHOD_POST, body) != OK:
+		req.queue_free()
+
+func query_matchmaker() -> void:
+	if matchmaker_url == "":
+		return
+	var req := HTTPRequest.new()
+	add_child(req)
+	req.request_completed.connect(func(_result: int, _code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+		req.queue_free()
+		var list = JSON.parse_string(body.get_string_from_utf8())
+		if not list is Array:
+			return
+		for entry in list:
+			if not entry is Dictionary or "ip" not in entry:
+				continue
+			var ip: String = entry["ip"]
+			if ip not in discovered_servers:
+				discovered_servers[ip] = entry
+				server_found.emit(entry as Dictionary)
+	)
+	if req.request(matchmaker_url + "/servers") != OK:
+		req.queue_free()
 
 # ── RPC: player registration ──────────────────────────────────────────────────
 

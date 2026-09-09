@@ -4,6 +4,7 @@ var _discovered: Array[Dictionary] = []
 var _pending_hero := "normal_person"
 var _pending_player_name := ""
 var _pending_host_data := {}
+var _server_screen: Control
 
 const _SAVE_PATH := "user://player_config.cfg"
 
@@ -29,6 +30,7 @@ func _ready() -> void:
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 	NetworkManager.game_starting.connect(_on_game_starting)
 
+	_build_server_screen()
 	_show("Main")
 
 func _load_name() -> void:
@@ -45,6 +47,70 @@ func _save_name(pname: String) -> void:
 	cfg.set_value("player", "name", pname)
 	cfg.save(_SAVE_PATH)
 
+# ── Server screen (matchmaker host UI) ───────────────────────────────────────
+
+func _build_server_screen() -> void:
+	_server_screen = Control.new()
+	_server_screen.name = "ServerScreen"
+	_server_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_server_screen.visible = false
+	add_child(_server_screen)
+
+	var bg := ColorRect.new()
+	bg.color = Color(0.08, 0.10, 0.14, 1)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_server_screen.add_child(bg)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "VBox"
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.custom_minimum_size = Vector2(400, 0)
+	vbox.position = Vector2(-200, -120)
+	vbox.add_theme_constant_override("separation", 18)
+	_server_screen.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "MATCHMAKER SERVER"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	vbox.add_child(title)
+
+	var status := Label.new()
+	status.name = "StatusLabel"
+	status.text = "Listening on port 7779"
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(status)
+
+	var hint := Label.new()
+	hint.text = "Port-forward TCP 7779 so laptops can reach this PC."
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(hint)
+
+	var games := Label.new()
+	games.name = "GamesLabel"
+	games.text = "Active games: 0"
+	games.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(games)
+
+	var stop := Button.new()
+	stop.name = "BtnStop"
+	stop.text = "Stop Server"
+	stop.custom_minimum_size = Vector2(200, 48)
+	stop.pressed.connect(_on_stop_server_pressed)
+	vbox.add_child(stop)
+
+func _refresh_server_screen() -> void:
+	if not _server_screen or not _server_screen.visible:
+		return
+	var vbox := _server_screen.get_node_or_null("VBox") as VBoxContainer
+	if not vbox:
+		return
+	var gl := vbox.get_node_or_null("GamesLabel") as Label
+	if gl:
+		gl.text = "Active games: %d" % Matchmaker.entry_count()
+
 # ── Panel switching ─────────────────────────────────────────────────────────
 
 func _show(screen: String) -> void:
@@ -52,6 +118,8 @@ func _show(screen: String) -> void:
 	$JoinScreen.visible    = (screen == "Join")
 	$LobbyScreen.visible   = (screen == "Lobby")
 	$OptionsScreen.visible = (screen == "Options")
+	if _server_screen:
+		_server_screen.visible = (screen == "Server")
 
 # ── Button handlers ─────────────────────────────────────────────────────────
 
@@ -61,12 +129,30 @@ func _on_host_pressed() -> void:
 func _on_join_pressed() -> void:
 	_show("Join")
 	($JoinScreen/VBox/ServerList as ItemList).clear()
-	($JoinScreen/VBox/StatusLabel as Label).text = "Searching for servers on LAN..."
 	_discovered.clear()
+	var has_matchmaker := NetworkManager.matchmaker_url != ""
+	($JoinScreen/VBox/StatusLabel as Label).text = \
+		"Searching LAN and internet..." if has_matchmaker else "Searching for servers on LAN..."
 	NetworkManager.start_discovery()
+	NetworkManager.query_matchmaker()
+
+func _on_server_pressed() -> void:
+	Matchmaker.start()
+	if Matchmaker.active:
+		_show("Server")
+
+func _on_stop_server_pressed() -> void:
+	Matchmaker.stop()
+	_show("Main")
 
 func _on_options_pressed() -> void:
+	($OptionsScreen/VBox/MatchmakerInput as LineEdit).text = NetworkManager.matchmaker_url
 	_show("Options")
+
+func _on_save_options_pressed() -> void:
+	NetworkManager.matchmaker_url = ($OptionsScreen/VBox/MatchmakerInput as LineEdit).text.strip_edges()
+	NetworkManager.save_network_config()
+	_show("Main")
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()
@@ -119,6 +205,9 @@ func _on_lobby_cancel_pressed() -> void:
 
 func _on_options_back_pressed() -> void:
 	_show("Main")
+
+func _process(_delta: float) -> void:
+	_refresh_server_screen()
 
 func _show_character_select(is_hosting: bool) -> void:
 	var cs := load("res://scenes/character_select.tscn").instantiate() as Control
